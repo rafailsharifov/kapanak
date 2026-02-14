@@ -531,6 +531,87 @@ body {
     color: var(--text-secondary);
 }
 
+/* Manage Cards Screen */
+.manage-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.manage-header h2 {
+    font-size: 1.25rem;
+}
+
+.card-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.card-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background-color: var(--bg-card);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.card-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.card-item-front {
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-item-back {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-item-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.card-item-delete:hover {
+    background-color: var(--danger);
+    color: #ffffff;
+}
+
+.empty-state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-muted);
+    padding: var(--space-xl);
+}
+
 /* Settings Screen */
 .settings-section {
     background-color: var(--bg-card);

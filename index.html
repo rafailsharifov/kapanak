@@ -66,6 +66,17 @@
                         </svg>
                         Import Cards
                     </button>
+                    <button id="manage-btn" class="btn btn-secondary">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        Manage Cards
+                    </button>
                 </div>
             </section>
 
@@ -152,6 +163,28 @@
                 <div class="import-actions">
                     <span class="import-preview" id="import-preview"></span>
                     <button id="import-submit-btn" class="btn btn-primary" disabled>Import Cards</button>
+                </div>
+            </section>
+
+            <!-- Manage Cards Screen -->
+            <section id="manage-screen" class="screen">
+                <div class="manage-header">
+                    <button id="manage-back-btn" class="btn btn-text">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        Back
+                    </button>
+                    <h2>Manage Cards</h2>
+                </div>
+
+                <div class="card-list" id="card-list">
+                    <!-- Cards will be populated here -->
+                </div>
+
+                <div class="empty-state hidden" id="empty-state">
+                    <p>No cards yet. Import some cards to get started!</p>
                 </div>
             </section>
 

@@ -21,6 +21,7 @@
         study: document.getElementById('study-screen'),
         complete: document.getElementById('complete-screen'),
         import: document.getElementById('import-screen'),
+        manage: document.getElementById('manage-screen'),
         settings: document.getElementById('settings-screen')
     };
 
@@ -30,7 +31,13 @@
     const studyBtn = document.getElementById('study-btn');
     const practiceBtn = document.getElementById('practice-btn');
     const importBtn = document.getElementById('import-btn');
+    const manageBtn = document.getElementById('manage-btn');
     const settingsBtn = document.getElementById('settings-btn');
+
+    // Manage screen elements
+    const manageBackBtn = document.getElementById('manage-back-btn');
+    const cardList = document.getElementById('card-list');
+    const emptyState = document.getElementById('empty-state');
 
     // Study screen elements
     const progressFill = document.getElementById('progress-fill');
@@ -106,8 +113,9 @@
 
         // Disable study button if no due cards
         studyBtn.disabled = dueCount === 0;
-        // Disable practice button if no cards at all
+        // Disable practice/manage buttons if no cards at all
         practiceBtn.disabled = totalCount === 0;
+        manageBtn.disabled = totalCount === 0;
     }
 
     /**
@@ -301,6 +309,69 @@
     }
 
     /**
+     * Render the card list in manage screen
+     */
+    async function renderCardList() {
+        const cards = await CardDB.getAllCards();
+        const collator = new Intl.Collator('pl', { sensitivity: 'base' });
+
+        // Sort cards alphabetically by front
+        cards.sort((a, b) => collator.compare(a.front, b.front));
+
+        if (cards.length === 0) {
+            cardList.classList.add('hidden');
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        cardList.classList.remove('hidden');
+        emptyState.classList.add('hidden');
+
+        cardList.innerHTML = cards.map(card => `
+            <div class="card-item" data-id="${card.id}">
+                <div class="card-item-content">
+                    <div class="card-item-front">${escapeHtml(card.front)}</div>
+                    <div class="card-item-back">${escapeHtml(card.back)}</div>
+                </div>
+                <button class="card-item-delete" aria-label="Delete card">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        `).join('');
+    }
+
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * Delete a single card
+     */
+    async function deleteCard(id) {
+        if (!confirm('Delete this card?')) {
+            return;
+        }
+
+        try {
+            await CardDB.deleteCard(id);
+            await renderCardList();
+            await updateStats();
+            showToast('Card deleted');
+        } catch (error) {
+            console.error('Delete error:', error);
+            showToast('Error deleting card');
+        }
+    }
+
+    /**
      * Handle import text input
      */
     function handleImportInput() {
@@ -486,6 +557,10 @@
         studyBtn.addEventListener('click', startStudy);
         practiceBtn.addEventListener('click', startPractice);
         importBtn.addEventListener('click', () => showScreen('import'));
+        manageBtn.addEventListener('click', async () => {
+            await renderCardList();
+            showScreen('manage');
+        });
         settingsBtn.addEventListener('click', () => showScreen('settings'));
 
         // Study screen
@@ -513,6 +588,21 @@
         backHomeBtn.addEventListener('click', async () => {
             await updateStats();
             showScreen('home');
+        });
+
+        // Manage screen
+        manageBackBtn.addEventListener('click', async () => {
+            await updateStats();
+            showScreen('home');
+        });
+        cardList.addEventListener('click', (e) => {
+            const deleteBtn = e.target.closest('.card-item-delete');
+            if (deleteBtn) {
+                const cardItem = deleteBtn.closest('.card-item');
+                if (cardItem) {
+                    deleteCard(cardItem.dataset.id);
+                }
+            }
         });
 
         // Import screen

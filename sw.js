@@ -3,7 +3,7 @@
  * Handles offline caching and app installation
  */
 
-const CACHE_NAME = 'kapanak-v2';
+const CACHE_NAME = 'kapanak-v3';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

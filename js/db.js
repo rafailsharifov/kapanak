@@ -115,6 +115,15 @@ async function getCard(id) {
 }
 
 /**
+ * Delete a single card by ID
+ * @param {string} id - Card ID to delete
+ * @returns {Promise<void>}
+ */
+async function deleteCard(id) {
+    return await db.cards.delete(id);
+}
+
+/**
  * Delete all cards from the database
  * @returns {Promise<void>}
  */
@@ -165,6 +174,7 @@ window.CardDB = {
     getTotalCount,
     updateCard,
     getCard,
+    deleteCard,
     deleteAllCards,
     exportData,
     importData
