@@ -25,6 +25,9 @@
         settings: document.getElementById('settings-screen')
     };
 
+    // Header elements
+    const logoBtn = document.getElementById('logo-btn');
+
     // Home screen elements
     const dueCountEl = document.getElementById('due-count');
     const totalCountEl = document.getElementById('total-count');
@@ -623,6 +626,12 @@
      * Initialize event listeners
      */
     function initEventListeners() {
+        // Logo - return to home
+        logoBtn.addEventListener('click', async () => {
+            await updateStats();
+            showScreen('home');
+        });
+
         // Home screen
         studyBtn.addEventListener('click', startStudy);
         practiceBtn.addEventListener('click', startPractice);
