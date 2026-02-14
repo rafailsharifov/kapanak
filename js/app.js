@@ -16,7 +16,6 @@
     let isPracticeMode = false; // Practice mode doesn't affect scheduling
     let isSwapped = false; // Swap front↔back display
     let soundEnabled = false;
-    let hapticEnabled = false;
     let notificationsEnabled = false;
 
     // DOM Elements
@@ -93,7 +92,6 @@
     // Settings screen elements
     const settingsBackBtn = document.getElementById('settings-back-btn');
     const soundToggle = document.getElementById('sound-toggle');
-    const hapticToggle = document.getElementById('haptic-toggle');
     const notificationToggle = document.getElementById('notification-toggle');
     const notificationHint = document.getElementById('notification-hint');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -340,7 +338,6 @@
         tapHint.classList.add('hidden');
         reviewButtons.classList.remove('hidden');
         playSound('flip');
-        triggerHaptic('light');
     }
 
     /**
@@ -372,13 +369,11 @@
         // Track review
         incrementTodayCount();
 
-        // Sound and haptic feedback
+        // Sound feedback
         if (quality === 0) {
             playSound('again');
-            triggerHaptic('medium');
         } else {
             playSound('success');
-            triggerHaptic('success');
         }
 
         // If "Again" (quality 0), card stays in queue at end
@@ -442,7 +437,6 @@
 
         // Celebration effects
         playSound('complete');
-        triggerHaptic('success');
         showConfetti();
     }
 
@@ -721,26 +715,6 @@
         soundToggle.checked = enabled;
     }
 
-    /**
-     * Check if vibration is supported
-     */
-    function isVibrationSupported() {
-        return 'vibrate' in navigator;
-    }
-
-    /**
-     * Toggle haptic feedback
-     */
-    function setHapticEnabled(enabled) {
-        if (enabled && !isVibrationSupported()) {
-            showToast('Vibration not supported on this device');
-            hapticToggle.checked = false;
-            return;
-        }
-        hapticEnabled = enabled;
-        localStorage.setItem('kapanak-haptic', enabled);
-        hapticToggle.checked = enabled;
-    }
 
     /**
      * Play sound effect
@@ -773,21 +747,6 @@
         oscillator.start();
         gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         oscillator.stop(audioCtx.currentTime + 0.1);
-    }
-
-    /**
-     * Trigger haptic feedback
-     */
-    function triggerHaptic(type) {
-        if (!hapticEnabled || !navigator.vibrate) return;
-
-        if (type === 'light') {
-            navigator.vibrate(10);
-        } else if (type === 'medium') {
-            navigator.vibrate(20);
-        } else if (type === 'success') {
-            navigator.vibrate([10, 50, 10]);
-        }
     }
 
     /**
@@ -904,10 +863,6 @@
         // Load sound preference
         const storedSound = localStorage.getItem('kapanak-sound');
         setSoundEnabled(storedSound === 'true');
-
-        // Load haptic preference
-        const storedHaptic = localStorage.getItem('kapanak-haptic');
-        setHapticEnabled(storedHaptic === 'true');
 
         // Load notification preference
         const storedNotifications = localStorage.getItem('kapanak-notifications');
@@ -1159,11 +1114,6 @@
         soundToggle.addEventListener('change', (e) => {
             setSoundEnabled(e.target.checked);
             if (e.target.checked) playSound('success');
-        });
-
-        hapticToggle.addEventListener('change', (e) => {
-            setHapticEnabled(e.target.checked);
-            if (e.target.checked) triggerHaptic('success');
         });
 
         notificationToggle.addEventListener('change', (e) => {
