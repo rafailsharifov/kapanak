@@ -186,6 +186,26 @@
                 <div class="empty-state hidden" id="empty-state">
                     <p>No cards yet. Import some cards to get started!</p>
                 </div>
+
+                <!-- Edit Card Modal -->
+                <div class="modal hidden" id="edit-modal">
+                    <div class="modal-content">
+                        <h3>Edit Card</h3>
+                        <input type="hidden" id="edit-card-id">
+                        <div class="form-group">
+                            <label for="edit-front">Front</label>
+                            <input type="text" id="edit-front" placeholder="Front side">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-back">Back</label>
+                            <input type="text" id="edit-back" placeholder="Back side">
+                        </div>
+                        <div class="modal-actions">
+                            <button id="edit-cancel-btn" class="btn btn-secondary">Cancel</button>
+                            <button id="edit-save-btn" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Settings Screen -->

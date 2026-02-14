@@ -39,6 +39,14 @@
     const cardList = document.getElementById('card-list');
     const emptyState = document.getElementById('empty-state');
 
+    // Edit modal elements
+    const editModal = document.getElementById('edit-modal');
+    const editCardId = document.getElementById('edit-card-id');
+    const editFront = document.getElementById('edit-front');
+    const editBack = document.getElementById('edit-back');
+    const editCancelBtn = document.getElementById('edit-cancel-btn');
+    const editSaveBtn = document.getElementById('edit-save-btn');
+
     // Study screen elements
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
@@ -336,12 +344,20 @@
                     <div class="card-item-front">${escapeHtml(card.front)}</div>
                     <div class="card-item-back">${escapeHtml(card.back)}</div>
                 </div>
-                <button class="card-item-delete" aria-label="Delete card">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                </button>
+                <div class="card-item-actions">
+                    <button class="card-item-edit" aria-label="Edit card">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="card-item-delete" aria-label="Delete card">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
         `).join('');
     }
@@ -371,6 +387,57 @@
         } catch (error) {
             console.error('Delete error:', error);
             showToast('Error deleting card');
+        }
+    }
+
+    /**
+     * Open edit modal for a card
+     */
+    async function openEditModal(id) {
+        const card = await CardDB.getCard(id);
+        if (!card) {
+            showToast('Card not found');
+            return;
+        }
+
+        editCardId.value = card.id;
+        editFront.value = card.front;
+        editBack.value = card.back;
+        editModal.classList.remove('hidden');
+        editFront.focus();
+    }
+
+    /**
+     * Close edit modal
+     */
+    function closeEditModal() {
+        editModal.classList.add('hidden');
+        editCardId.value = '';
+        editFront.value = '';
+        editBack.value = '';
+    }
+
+    /**
+     * Save edited card
+     */
+    async function saveEditedCard() {
+        const id = editCardId.value;
+        const front = editFront.value.trim();
+        const back = editBack.value.trim();
+
+        if (!front || !back) {
+            showToast('Both fields are required');
+            return;
+        }
+
+        try {
+            await CardDB.updateCard(id, { front, back });
+            closeEditModal();
+            await renderCardList();
+            showToast('Card updated');
+        } catch (error) {
+            console.error('Edit error:', error);
+            showToast('Error updating card');
         }
     }
 
@@ -599,13 +666,32 @@
             showScreen('home');
         });
         cardList.addEventListener('click', (e) => {
+            const cardItem = e.target.closest('.card-item');
+            if (!cardItem) return;
+
+            const editBtn = e.target.closest('.card-item-edit');
             const deleteBtn = e.target.closest('.card-item-delete');
-            if (deleteBtn) {
-                const cardItem = deleteBtn.closest('.card-item');
-                if (cardItem) {
-                    deleteCard(cardItem.dataset.id);
-                }
+
+            if (editBtn) {
+                openEditModal(cardItem.dataset.id);
+            } else if (deleteBtn) {
+                deleteCard(cardItem.dataset.id);
             }
+        });
+
+        // Edit modal
+        editCancelBtn.addEventListener('click', closeEditModal);
+        editSaveBtn.addEventListener('click', saveEditedCard);
+        editModal.addEventListener('click', (e) => {
+            if (e.target === editModal) {
+                closeEditModal();
+            }
+        });
+        editFront.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') editBack.focus();
+        });
+        editBack.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveEditedCard();
         });
 
         // Import screen

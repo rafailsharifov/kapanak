@@ -582,6 +582,13 @@ body {
     text-overflow: ellipsis;
 }
 
+.card-item-actions {
+    display: flex;
+    gap: var(--space-xs);
+    flex-shrink: 0;
+}
+
+.card-item-edit,
 .card-item-delete {
     display: flex;
     align-items: center;
@@ -594,12 +601,84 @@ body {
     color: var(--text-muted);
     cursor: pointer;
     transition: background-color var(--transition-fast), color var(--transition-fast);
-    flex-shrink: 0;
+}
+
+.card-item-edit:hover {
+    background-color: var(--accent);
+    color: #ffffff;
 }
 
 .card-item-delete:hover {
     background-color: var(--danger);
     color: #ffffff;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    z-index: 200;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background-color: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 8px 30px var(--shadow-lg);
+}
+
+.modal-content h3 {
+    margin-bottom: var(--space-lg);
+}
+
+.form-group {
+    margin-bottom: var(--space-md);
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.form-group input {
+    width: 100%;
+    padding: var(--space-md);
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-primary);
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+.modal-actions .btn {
+    flex: 1;
 }
 
 .empty-state {
