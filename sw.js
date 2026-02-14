@@ -3,26 +3,26 @@
  * Handles offline caching and app installation
  */
 
-importScripts('/js/version.js');
+importScripts('./js/version.js');
 const CACHE_NAME = `kapanak-v${APP_VERSION}`;
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/css/style.css',
-    '/js/version.js',
-    '/js/db.js',
-    '/js/sm2.js',
-    '/js/import.js',
-    '/js/app.js',
-    '/icons/icon-72.png',
-    '/icons/icon-96.png',
-    '/icons/icon-128.png',
-    '/icons/icon-144.png',
-    '/icons/icon-152.png',
-    '/icons/icon-192.png',
-    '/icons/icon-384.png',
-    '/icons/icon-512.png',
+    './',
+    './index.html',
+    './manifest.json',
+    './css/style.css',
+    './js/version.js',
+    './js/db.js',
+    './js/sm2.js',
+    './js/import.js',
+    './js/app.js',
+    './icons/icon-72.png',
+    './icons/icon-96.png',
+    './icons/icon-128.png',
+    './icons/icon-144.png',
+    './icons/icon-152.png',
+    './icons/icon-192.png',
+    './icons/icon-384.png',
+    './icons/icon-512.png',
     'https://unpkg.com/dexie@3.2.4/dist/dexie.min.js'
 ];
 
@@ -96,7 +96,7 @@ self.addEventListener('fetch', (event) => {
                     .catch(() => {
                         // Return offline fallback for navigation requests
                         if (event.request.mode === 'navigate') {
-                            return caches.match('/index.html');
+                            return caches.match('./index.html');
                         }
                         return new Response('Offline', { status: 503 });
                     });

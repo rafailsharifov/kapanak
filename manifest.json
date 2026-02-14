@@ -2,12 +2,12 @@
   "name": "Kapanak - Spaced Repetition Flashcards",
   "short_name": "Kapanak",
   "description": "Simple spaced repetition flashcards for language learning with Polish support",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#1a1a2e",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": "./",
   "lang": "pl",
   "icons": [
     {
