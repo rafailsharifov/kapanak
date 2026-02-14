@@ -149,6 +149,7 @@
 
             <!-- Study Complete Screen -->
             <section id="complete-screen" class="screen">
+                <div class="confetti-container" id="confetti-container"></div>
                 <div class="complete-content">
                     <div class="complete-icon">
                         <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -257,6 +258,36 @@
                         </svg>
                         Manage Cards
                     </button>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Feedback</h3>
+                    <div class="setting-item">
+                        <span>Sound Effects</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="sound-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <span>Vibration</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="haptic-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Notifications</h3>
+                    <div class="setting-item">
+                        <span>Daily Reminder</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="notification-toggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="setting-hint" id="notification-hint">Get reminded to study every day</p>
                 </div>
 
                 <div class="settings-section">

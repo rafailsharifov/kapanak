@@ -15,6 +15,9 @@
     let isDarkMode = false;
     let isPracticeMode = false; // Practice mode doesn't affect scheduling
     let isSwapped = false; // Swap front↔back display
+    let soundEnabled = false;
+    let hapticEnabled = false;
+    let notificationsEnabled = false;
 
     // DOM Elements
     const screens = {
@@ -89,7 +92,12 @@
 
     // Settings screen elements
     const settingsBackBtn = document.getElementById('settings-back-btn');
+    const soundToggle = document.getElementById('sound-toggle');
+    const hapticToggle = document.getElementById('haptic-toggle');
+    const notificationToggle = document.getElementById('notification-toggle');
+    const notificationHint = document.getElementById('notification-hint');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const confettiContainer = document.getElementById('confetti-container');
     const exportBtn = document.getElementById('export-btn');
     const importBackupBtn = document.getElementById('import-backup-btn');
     const backupFileInput = document.getElementById('backup-file-input');
@@ -331,6 +339,8 @@
         flashcard.classList.add('flipped');
         tapHint.classList.add('hidden');
         reviewButtons.classList.remove('hidden');
+        playSound('flip');
+        triggerHaptic('light');
     }
 
     /**
@@ -361,6 +371,15 @@
 
         // Track review
         incrementTodayCount();
+
+        // Sound and haptic feedback
+        if (quality === 0) {
+            playSound('again');
+            triggerHaptic('medium');
+        } else {
+            playSound('success');
+            triggerHaptic('success');
+        }
 
         // If "Again" (quality 0), card stays in queue at end
         if (quality === 0) {
@@ -420,6 +439,11 @@
         }
 
         showScreen('complete');
+
+        // Celebration effects
+        playSound('complete');
+        triggerHaptic('success');
+        showConfetti();
     }
 
     /**
@@ -558,7 +582,7 @@
     }
 
     /**
-     * Submit import
+     * Submit import with duplicate detection
      */
     async function submitImport() {
         const text = importTextarea.value;
@@ -570,8 +594,45 @@
         }
 
         try {
-            await CardDB.addCards(cards);
-            showToast(`Imported ${cards.length} card${cards.length !== 1 ? 's' : ''}`);
+            // Check for duplicates
+            const existingCards = await CardDB.getAllCards();
+            const existingFronts = new Set(existingCards.map(c => c.front.toLowerCase().trim()));
+
+            const newCards = [];
+            const duplicates = [];
+
+            for (const card of cards) {
+                const frontLower = card.front.toLowerCase().trim();
+                if (existingFronts.has(frontLower)) {
+                    duplicates.push(card.front);
+                } else {
+                    newCards.push(card);
+                    existingFronts.add(frontLower); // Prevent duplicates within import
+                }
+            }
+
+            if (duplicates.length > 0 && newCards.length > 0) {
+                const proceed = confirm(
+                    `Found ${duplicates.length} duplicate(s) that will be skipped:\n\n` +
+                    duplicates.slice(0, 5).join(', ') +
+                    (duplicates.length > 5 ? `\n...and ${duplicates.length - 5} more` : '') +
+                    `\n\nImport ${newCards.length} new card(s)?`
+                );
+                if (!proceed) return;
+            } else if (duplicates.length > 0 && newCards.length === 0) {
+                showToast('All cards already exist');
+                return;
+            }
+
+            if (newCards.length > 0) {
+                await CardDB.addCards(newCards);
+                let message = `Imported ${newCards.length} card${newCards.length !== 1 ? 's' : ''}`;
+                if (duplicates.length > 0) {
+                    message += `, ${duplicates.length} skipped`;
+                }
+                showToast(message);
+            }
+
             importTextarea.value = '';
             handleImportInput();
             await updateStats();
@@ -652,6 +713,164 @@
     }
 
     /**
+     * Toggle sound effects
+     */
+    function setSoundEnabled(enabled) {
+        soundEnabled = enabled;
+        localStorage.setItem('kapanak-sound', enabled);
+        soundToggle.checked = enabled;
+    }
+
+    /**
+     * Toggle haptic feedback
+     */
+    function setHapticEnabled(enabled) {
+        hapticEnabled = enabled;
+        localStorage.setItem('kapanak-haptic', enabled);
+        hapticToggle.checked = enabled;
+    }
+
+    /**
+     * Play sound effect
+     */
+    function playSound(type) {
+        if (!soundEnabled) return;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        // Different sounds for different actions
+        if (type === 'success') {
+            oscillator.frequency.value = 800;
+            gainNode.gain.value = 0.1;
+        } else if (type === 'again') {
+            oscillator.frequency.value = 300;
+            gainNode.gain.value = 0.1;
+        } else if (type === 'flip') {
+            oscillator.frequency.value = 600;
+            gainNode.gain.value = 0.05;
+        } else if (type === 'complete') {
+            oscillator.frequency.value = 1000;
+            gainNode.gain.value = 0.1;
+        }
+
+        oscillator.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    }
+
+    /**
+     * Trigger haptic feedback
+     */
+    function triggerHaptic(type) {
+        if (!hapticEnabled || !navigator.vibrate) return;
+
+        if (type === 'light') {
+            navigator.vibrate(10);
+        } else if (type === 'medium') {
+            navigator.vibrate(20);
+        } else if (type === 'success') {
+            navigator.vibrate([10, 50, 10]);
+        }
+    }
+
+    /**
+     * Show confetti animation
+     */
+    function showConfetti() {
+        confettiContainer.innerHTML = '';
+        const colors = ['#4361ee', '#7c3aed', '#2ecc71', '#f1c40f', '#e74c3c', '#ff6b6b'];
+
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+            confettiContainer.appendChild(confetti);
+        }
+
+        // Clean up after animation
+        setTimeout(() => {
+            confettiContainer.innerHTML = '';
+        }, 4000);
+    }
+
+    /**
+     * Request notification permission and enable reminders
+     */
+    async function setNotificationsEnabled(enabled) {
+        if (enabled) {
+            if (!('Notification' in window)) {
+                showToast('Notifications not supported');
+                notificationToggle.checked = false;
+                return;
+            }
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                showToast('Notification permission denied');
+                notificationToggle.checked = false;
+                return;
+            }
+
+            notificationsEnabled = true;
+            localStorage.setItem('kapanak-notifications', 'true');
+            notificationHint.textContent = 'Reminder enabled for 9:00 AM';
+            scheduleNotification();
+        } else {
+            notificationsEnabled = false;
+            localStorage.setItem('kapanak-notifications', 'false');
+            notificationHint.textContent = 'Get reminded to study every day';
+        }
+        notificationToggle.checked = notificationsEnabled;
+    }
+
+    /**
+     * Schedule daily notification
+     */
+    function scheduleNotification() {
+        if (!notificationsEnabled || !('serviceWorker' in navigator)) return;
+
+        // Store reminder preference - service worker will check this
+        localStorage.setItem('kapanak-reminder-time', '09:00');
+    }
+
+    /**
+     * Check and show notification if needed (called on app load)
+     */
+    function checkNotificationReminder() {
+        if (!notificationsEnabled) return;
+
+        const lastNotification = localStorage.getItem('kapanak-last-notification');
+        const today = new Date().toDateString();
+
+        if (lastNotification !== today) {
+            const now = new Date();
+            const reminderHour = 9;
+
+            if (now.getHours() >= reminderHour) {
+                const lastStudy = localStorage.getItem('kapanak-last-study');
+                if (lastStudy !== today) {
+                    // Show notification if hasn't studied today
+                    if (Notification.permission === 'granted') {
+                        new Notification('🦋 Kapanak', {
+                            body: 'Time to review your flashcards!',
+                            icon: './icons/icon-192.png'
+                        });
+                        localStorage.setItem('kapanak-last-notification', today);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Toggle dark mode
      * @param {boolean} enabled - Whether dark mode should be enabled
      */
@@ -669,6 +888,23 @@
         // Load swap mode preference
         const storedSwap = localStorage.getItem('kapanak-swap-mode');
         setSwapMode(storedSwap === 'true');
+
+        // Load sound preference
+        const storedSound = localStorage.getItem('kapanak-sound');
+        setSoundEnabled(storedSound === 'true');
+
+        // Load haptic preference
+        const storedHaptic = localStorage.getItem('kapanak-haptic');
+        setHapticEnabled(storedHaptic === 'true');
+
+        // Load notification preference
+        const storedNotifications = localStorage.getItem('kapanak-notifications');
+        notificationsEnabled = storedNotifications === 'true';
+        notificationToggle.checked = notificationsEnabled;
+        if (notificationsEnabled) {
+            notificationHint.textContent = 'Reminder enabled for 9:00 AM';
+            checkNotificationReminder();
+        }
 
         // Check system preference first, then stored preference
         const stored = localStorage.getItem('kapanak-dark-mode');
@@ -906,6 +1142,20 @@
         settingsBackBtn.addEventListener('click', async () => {
             await updateStats();
             showScreen('home');
+        });
+
+        soundToggle.addEventListener('change', (e) => {
+            setSoundEnabled(e.target.checked);
+            if (e.target.checked) playSound('success');
+        });
+
+        hapticToggle.addEventListener('change', (e) => {
+            setHapticEnabled(e.target.checked);
+            if (e.target.checked) triggerHaptic('success');
+        });
+
+        notificationToggle.addEventListener('change', (e) => {
+            setNotificationsEnabled(e.target.checked);
         });
 
         darkModeToggle.addEventListener('change', (e) => {
