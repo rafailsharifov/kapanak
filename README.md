@@ -44,8 +44,10 @@ Visit: `https://rafailsharifov.github.io/kapanak/`
 
 | Mode | Description |
 |------|-------------|
-| **Study Due** | Review cards scheduled for today. Affects SRS timing. |
-| **Practice All** | Practice any cards without affecting schedule. |
+| **Study Due** | Review only cards scheduled for today. |
+| **Practice All** | Review all cards (including not yet due). |
+
+Both modes update the spaced repetition schedule.
 
 ### Review Buttons
 

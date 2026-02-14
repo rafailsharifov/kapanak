@@ -216,16 +216,9 @@
         tapHint.classList.remove('hidden');
         reviewButtons.classList.add('hidden');
 
-        // Update interval hints (only show in study mode)
-        if (isPracticeMode) {
-            goodHint.textContent = '';
-            easyHint.textContent = '';
-            undoBtn.style.visibility = 'hidden';
-        } else {
-            goodHint.textContent = SM2.getIntervalHint(card, 3);
-            easyHint.textContent = SM2.getIntervalHint(card, 5);
-            undoBtn.style.visibility = 'visible';
-        }
+        // Update interval hints
+        goodHint.textContent = SM2.getIntervalHint(card, 3);
+        easyHint.textContent = SM2.getIntervalHint(card, 5);
     }
 
     /**
@@ -244,31 +237,15 @@
     async function handleReview(quality) {
         const card = studyQueue[currentCardIndex];
 
-        // Save for undo (only in study mode, not practice)
-        if (!isPracticeMode) {
-            lastAction = {
-                card: { ...card },
-                index: currentCardIndex,
-                wasInQueue: true
-            };
-            undoBtn.disabled = false;
-        }
+        // Save for undo
+        lastAction = {
+            card: { ...card },
+            index: currentCardIndex,
+            wasInQueue: true
+        };
+        undoBtn.disabled = false;
 
-        // In practice mode, just move through cards without updating schedule
-        if (isPracticeMode) {
-            if (quality === 0) {
-                // Move card to end for another try
-                const failedCard = studyQueue.splice(currentCardIndex, 1)[0];
-                studyQueue.push(failedCard);
-            } else {
-                reviewedCount++;
-                currentCardIndex++;
-            }
-            showCard();
-            return;
-        }
-
-        // Study mode: Calculate and save next review
+        // Calculate and save next review (both modes update schedule)
         const updated = SM2.calculateNextReview(card, quality);
         await CardDB.updateCard(card.id, updated);
 
@@ -293,7 +270,7 @@
      * Undo last review action
      */
     async function undoLastAction() {
-        if (!lastAction || isPracticeMode) return;
+        if (!lastAction) return;
 
         const { card, index } = lastAction;
 
