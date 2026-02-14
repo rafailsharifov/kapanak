@@ -32,13 +32,20 @@
     // Home screen elements
     const dueCountEl = document.getElementById('due-count');
     const totalCountEl = document.getElementById('total-count');
+    const todayReviewedEl = document.getElementById('today-reviewed');
+    const streakBanner = document.getElementById('streak-banner');
+    const streakText = document.getElementById('streak-text');
+    const masteredPercent = document.getElementById('mastered-percent');
+    const masteryFill = document.getElementById('mastery-fill');
+    const swapToggle = document.getElementById('swap-toggle');
+    const swapLabel = document.getElementById('swap-label');
     const studyBtn = document.getElementById('study-btn');
     const practiceBtn = document.getElementById('practice-btn');
     const importBtn = document.getElementById('import-btn');
-    const manageBtn = document.getElementById('manage-btn');
     const settingsBtn = document.getElementById('settings-btn');
 
     // Manage screen elements
+    const manageBtn = document.getElementById('manage-btn');
     const manageBackBtn = document.getElementById('manage-back-btn');
     const cardList = document.getElementById('card-list');
     const emptyState = document.getElementById('empty-state');
@@ -54,6 +61,7 @@
     // Study screen elements
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
+    const flashcardContainer = document.getElementById('flashcard-container');
     const flashcard = document.getElementById('flashcard');
     const cardFront = document.getElementById('card-front');
     const cardBack = document.getElementById('card-back');
@@ -63,6 +71,11 @@
     const easyHint = document.getElementById('easy-hint');
     const undoBtn = document.getElementById('undo-btn');
     const endStudyBtn = document.getElementById('end-study-btn');
+
+    // Swipe gesture state
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isSwiping = false;
 
     // Complete screen elements
     const completeStats = document.getElementById('complete-stats');
@@ -76,7 +89,6 @@
 
     // Settings screen elements
     const settingsBackBtn = document.getElementById('settings-back-btn');
-    const swapToggle = document.getElementById('swap-toggle');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const exportBtn = document.getElementById('export-btn');
     const importBackupBtn = document.getElementById('import-backup-btn');
@@ -119,19 +131,106 @@
      * Update home screen stats
      */
     async function updateStats() {
-        const [dueCount, totalCount] = await Promise.all([
+        const [dueCount, totalCount, allCards] = await Promise.all([
             CardDB.getDueCount(),
-            CardDB.getTotalCount()
+            CardDB.getTotalCount(),
+            CardDB.getAllCards()
         ]);
 
         dueCountEl.textContent = dueCount;
         totalCountEl.textContent = totalCount;
 
+        // Calculate mastered cards (cards with 3+ successful repetitions)
+        const masteredCount = allCards.filter(c => c.repetitions >= 3).length;
+        const masteredPct = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
+        masteredPercent.textContent = `${masteredPct}%`;
+        masteryFill.style.width = `${masteredPct}%`;
+
+        // Get today's reviewed count from localStorage
+        const today = new Date().toDateString();
+        const storedDate = localStorage.getItem('kapanak-review-date');
+        let todayCount = 0;
+        if (storedDate === today) {
+            todayCount = parseInt(localStorage.getItem('kapanak-today-count') || '0', 10);
+        }
+        todayReviewedEl.textContent = todayCount;
+
+        // Update streak
+        updateStreak();
+
         // Disable study button if no due cards
         studyBtn.disabled = dueCount === 0;
-        // Disable practice/manage buttons if no cards at all
+        // Disable practice button if no cards at all
         practiceBtn.disabled = totalCount === 0;
-        manageBtn.disabled = totalCount === 0;
+        // Disable manage button if no cards
+        if (manageBtn) manageBtn.disabled = totalCount === 0;
+    }
+
+    /**
+     * Update streak display
+     */
+    function updateStreak() {
+        const streak = parseInt(localStorage.getItem('kapanak-streak') || '0', 10);
+        const lastStudy = localStorage.getItem('kapanak-last-study');
+        const today = new Date().toDateString();
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+        // Check if streak is still valid
+        let currentStreak = streak;
+        if (lastStudy !== today && lastStudy !== yesterday) {
+            currentStreak = 0;
+            localStorage.setItem('kapanak-streak', '0');
+        }
+
+        streakText.textContent = `${currentStreak} day streak`;
+        if (currentStreak === 0) {
+            streakBanner.classList.add('inactive');
+        } else {
+            streakBanner.classList.remove('inactive');
+        }
+    }
+
+    /**
+     * Record a study session for streak tracking
+     */
+    function recordStudySession() {
+        const today = new Date().toDateString();
+        const lastStudy = localStorage.getItem('kapanak-last-study');
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+        let streak = parseInt(localStorage.getItem('kapanak-streak') || '0', 10);
+
+        if (lastStudy === today) {
+            // Already studied today, don't update streak
+        } else if (lastStudy === yesterday) {
+            // Continued streak
+            streak++;
+        } else {
+            // Streak broken, start new
+            streak = 1;
+        }
+
+        localStorage.setItem('kapanak-streak', streak.toString());
+        localStorage.setItem('kapanak-last-study', today);
+    }
+
+    /**
+     * Increment today's review count
+     */
+    function incrementTodayCount() {
+        const today = new Date().toDateString();
+        const storedDate = localStorage.getItem('kapanak-review-date');
+
+        let count = 0;
+        if (storedDate === today) {
+            count = parseInt(localStorage.getItem('kapanak-today-count') || '0', 10);
+        } else {
+            localStorage.setItem('kapanak-review-date', today);
+        }
+
+        count++;
+        localStorage.setItem('kapanak-today-count', count.toString());
+        todayReviewedEl.textContent = count;
     }
 
     /**
@@ -214,7 +313,9 @@
         const displayBack = isSwapped ? card.front : card.back;
         cardFront.textContent = displayFront;
         cardBack.textContent = displayBack;
-        cardBack.classList.add('hidden');
+
+        // Reset flip state
+        flashcard.classList.remove('flipped', 'swiping-left', 'swiping-right', 'swiping-up');
         tapHint.classList.remove('hidden');
         reviewButtons.classList.add('hidden');
 
@@ -224,12 +325,19 @@
     }
 
     /**
-     * Reveal the back of the card
+     * Reveal the back of the card (flip animation)
      */
     function revealCard() {
-        cardBack.classList.remove('hidden');
+        flashcard.classList.add('flipped');
         tapHint.classList.add('hidden');
         reviewButtons.classList.remove('hidden');
+    }
+
+    /**
+     * Check if card is flipped (revealed)
+     */
+    function isCardFlipped() {
+        return flashcard.classList.contains('flipped');
     }
 
     /**
@@ -250,6 +358,9 @@
         // Calculate and save next review (both modes update schedule)
         const updated = SM2.calculateNextReview(card, quality);
         await CardDB.updateCard(card.id, updated);
+
+        // Track review
+        incrementTodayCount();
 
         // If "Again" (quality 0), card stays in queue at end
         if (quality === 0) {
@@ -302,6 +413,12 @@
     function endStudy() {
         const modeText = isPracticeMode ? 'practiced' : 'reviewed';
         completeStats.textContent = `You ${modeText} ${reviewedCount} card${reviewedCount !== 1 ? 's' : ''}.`;
+
+        // Record streak if reviewed at least one card
+        if (reviewedCount > 0) {
+            recordStudySession();
+        }
+
         showScreen('complete');
     }
 
@@ -531,6 +648,7 @@
         isSwapped = enabled;
         localStorage.setItem('kapanak-swap-mode', enabled);
         swapToggle.checked = enabled;
+        swapLabel.textContent = enabled ? 'Back → Front' : 'Front → Back';
     }
 
     /**
@@ -564,6 +682,73 @@
     }
 
     /**
+     * Handle touch start for swipe gestures
+     */
+    function handleTouchStart(e) {
+        if (!isCardFlipped()) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        isSwiping = true;
+    }
+
+    /**
+     * Handle touch move for swipe visual feedback
+     */
+    function handleTouchMove(e) {
+        if (!isSwiping || !isCardFlipped()) return;
+
+        const deltaX = e.touches[0].clientX - touchStartX;
+        const deltaY = e.touches[0].clientY - touchStartY;
+
+        // Show visual feedback
+        flashcard.classList.remove('swiping-left', 'swiping-right', 'swiping-up');
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX < -50) {
+                flashcard.classList.add('swiping-left');
+                e.preventDefault();
+            } else if (deltaX > 50) {
+                flashcard.classList.add('swiping-right');
+                e.preventDefault();
+            }
+        } else if (deltaY < -50) {
+            flashcard.classList.add('swiping-up');
+            e.preventDefault();
+        }
+    }
+
+    /**
+     * Handle touch end for swipe action
+     */
+    function handleTouchEnd(e) {
+        if (!isSwiping || !isCardFlipped()) {
+            isSwiping = false;
+            return;
+        }
+
+        const deltaX = e.changedTouches[0].clientX - touchStartX;
+        const deltaY = e.changedTouches[0].clientY - touchStartY;
+        const threshold = 80;
+
+        flashcard.classList.remove('swiping-left', 'swiping-right', 'swiping-up');
+
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            if (deltaX < -threshold) {
+                // Swipe left = Again
+                handleReview(0);
+            } else if (deltaX > threshold) {
+                // Swipe right = Good
+                handleReview(3);
+            }
+        } else if (deltaY < -threshold) {
+            // Swipe up = Easy
+            handleReview(5);
+        }
+
+        isSwiping = false;
+    }
+
+    /**
      * Handle keyboard shortcuts
      * @param {KeyboardEvent} event
      */
@@ -577,14 +762,14 @@
         const key = event.key.toLowerCase();
 
         // Space or Enter to reveal
-        if ((key === ' ' || key === 'enter') && cardBack.classList.contains('hidden')) {
+        if ((key === ' ' || key === 'enter') && !isCardFlipped()) {
             event.preventDefault();
             revealCard();
             return;
         }
 
         // Review shortcuts (only when card is revealed)
-        if (!cardBack.classList.contains('hidden')) {
+        if (isCardFlipped()) {
             if (key === '1' || key === 'a') {
                 event.preventDefault();
                 handleReview(0); // Again
@@ -633,18 +818,30 @@
         studyBtn.addEventListener('click', startStudy);
         practiceBtn.addEventListener('click', startPractice);
         importBtn.addEventListener('click', () => showScreen('import'));
+        settingsBtn.addEventListener('click', () => showScreen('settings'));
+
+        // Swap toggle on home
+        swapToggle.addEventListener('change', (e) => {
+            setSwapMode(e.target.checked);
+        });
+
+        // Manage button (now in settings)
         manageBtn.addEventListener('click', async () => {
             await renderCardList();
             showScreen('manage');
         });
-        settingsBtn.addEventListener('click', () => showScreen('settings'));
 
-        // Study screen
+        // Study screen - click to flip
         flashcard.addEventListener('click', () => {
-            if (cardBack.classList.contains('hidden')) {
+            if (!isCardFlipped()) {
                 revealCard();
             }
         });
+
+        // Swipe gestures for mobile
+        flashcardContainer.addEventListener('touchstart', handleTouchStart, { passive: true });
+        flashcardContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
+        flashcardContainer.addEventListener('touchend', handleTouchEnd, { passive: true });
 
         document.querySelectorAll('.review-buttons .btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -709,10 +906,6 @@
         settingsBackBtn.addEventListener('click', async () => {
             await updateStats();
             showScreen('home');
-        });
-
-        swapToggle.addEventListener('change', (e) => {
-            setSwapMode(e.target.checked);
         });
 
         darkModeToggle.addEventListener('change', (e) => {

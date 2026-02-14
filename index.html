@@ -33,50 +33,72 @@
         <main class="main">
             <!-- Home Screen -->
             <section id="home-screen" class="screen active">
-                <div class="stats-card">
-                    <div class="stat">
-                        <span class="stat-number" id="due-count">0</span>
-                        <span class="stat-label">Due Today</span>
+                <!-- Stats Dashboard -->
+                <div class="dashboard">
+                    <div class="streak-banner" id="streak-banner">
+                        <span class="streak-icon">🔥</span>
+                        <span class="streak-text" id="streak-text">0 day streak</span>
                     </div>
-                    <div class="stat">
-                        <span class="stat-number" id="total-count">0</span>
-                        <span class="stat-label">Total Cards</span>
+
+                    <div class="progress-card">
+                        <div class="progress-label">
+                            <span>Mastered</span>
+                            <span id="mastered-percent">0%</span>
+                        </div>
+                        <div class="mastery-bar">
+                            <div class="mastery-fill" id="mastery-fill"></div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-number" id="due-count">0</span>
+                            <span class="stat-label">Due</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number" id="total-count">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-number" id="today-reviewed">0</span>
+                            <span class="stat-label">Today</span>
+                        </div>
                     </div>
                 </div>
 
+                <!-- Swap Toggle -->
+                <div class="swap-toggle-home">
+                    <span class="swap-label" id="swap-label">Front → Back</span>
+                    <label class="toggle">
+                        <input type="checkbox" id="swap-toggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+
                 <div class="home-actions">
-                    <button id="study-btn" class="btn btn-primary btn-large">
+                    <button id="study-btn" class="btn btn-primary btn-large btn-gradient">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polygon points="5 3 19 12 5 21 5 3"></polygon>
                         </svg>
                         Study Due
                     </button>
-                    <button id="practice-btn" class="btn btn-secondary btn-large">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                        </svg>
-                        Practice All
-                    </button>
-                    <button id="import-btn" class="btn btn-secondary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        Import Cards
-                    </button>
-                    <button id="manage-btn" class="btn btn-secondary">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="8" y1="6" x2="21" y2="6"></line>
-                            <line x1="8" y1="12" x2="21" y2="12"></line>
-                            <line x1="8" y1="18" x2="21" y2="18"></line>
-                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                        </svg>
-                        Manage Cards
-                    </button>
+                    <div class="btn-row">
+                        <button id="practice-btn" class="btn btn-secondary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Practice All
+                        </button>
+                        <button id="import-btn" class="btn btn-secondary">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Import
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -89,12 +111,13 @@
                     <span class="progress-text" id="progress-text">0 / 0</span>
                 </div>
 
-                <div class="flashcard" id="flashcard">
-                    <div class="card-content">
-                        <p class="card-front" id="card-front"></p>
-                        <p class="card-back hidden" id="card-back"></p>
+                <div class="flashcard-container" id="flashcard-container">
+                    <div class="flashcard" id="flashcard">
+                        <div class="card-face card-face-front" id="card-front"></div>
+                        <div class="card-face card-face-back" id="card-back"></div>
                     </div>
-                    <button class="tap-hint" id="tap-hint">Tap to reveal</button>
+                    <p class="tap-hint" id="tap-hint">Tap to flip</p>
+                    <p class="swipe-hint">← Again · Good → · Easy ↑</p>
                 </div>
 
                 <div class="review-buttons hidden" id="review-buttons">
@@ -222,15 +245,18 @@
                 </div>
 
                 <div class="settings-section">
-                    <h3>Study</h3>
-                    <div class="setting-item">
-                        <span>Swap Front ↔ Back</span>
-                        <label class="toggle">
-                            <input type="checkbox" id="swap-toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                    <p class="setting-hint">Show back side first (e.g., English → Polish)</p>
+                    <h3>Cards</h3>
+                    <button id="manage-btn" class="btn btn-secondary btn-full">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        Manage Cards
+                    </button>
                 </div>
 
                 <div class="settings-section">
