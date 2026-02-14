@@ -14,6 +14,7 @@
     let lastAction = null; // For undo functionality
     let isDarkMode = false;
     let isPracticeMode = false; // Practice mode doesn't affect scheduling
+    let isSwapped = false; // Swap front↔back display
 
     // DOM Elements
     const screens = {
@@ -75,6 +76,7 @@
 
     // Settings screen elements
     const settingsBackBtn = document.getElementById('settings-back-btn');
+    const swapToggle = document.getElementById('swap-toggle');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     const exportBtn = document.getElementById('export-btn');
     const importBackupBtn = document.getElementById('import-backup-btn');
@@ -205,9 +207,11 @@
         progressFill.style.width = `${progress}%`;
         progressText.textContent = `${currentCardIndex} / ${studyQueue.length}`;
 
-        // Show front, hide back
-        cardFront.textContent = card.front;
-        cardBack.textContent = card.back;
+        // Show front, hide back (swap if enabled)
+        const displayFront = isSwapped ? card.back : card.front;
+        const displayBack = isSwapped ? card.front : card.back;
+        cardFront.textContent = displayFront;
+        cardBack.textContent = displayBack;
         cardBack.classList.add('hidden');
         tapHint.classList.remove('hidden');
         reviewButtons.classList.add('hidden');
@@ -541,6 +545,16 @@
     }
 
     /**
+     * Toggle swap mode (front↔back)
+     * @param {boolean} enabled - Whether to swap front and back
+     */
+    function setSwapMode(enabled) {
+        isSwapped = enabled;
+        localStorage.setItem('kapanak-swap-mode', enabled);
+        swapToggle.checked = enabled;
+    }
+
+    /**
      * Toggle dark mode
      * @param {boolean} enabled - Whether dark mode should be enabled
      */
@@ -555,6 +569,10 @@
      * Load saved preferences
      */
     function loadPreferences() {
+        // Load swap mode preference
+        const storedSwap = localStorage.getItem('kapanak-swap-mode');
+        setSwapMode(storedSwap === 'true');
+
         // Check system preference first, then stored preference
         const stored = localStorage.getItem('kapanak-dark-mode');
         const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -712,6 +730,10 @@
         settingsBackBtn.addEventListener('click', async () => {
             await updateStats();
             showScreen('home');
+        });
+
+        swapToggle.addEventListener('change', (e) => {
+            setSwapMode(e.target.checked);
         });
 
         darkModeToggle.addEventListener('change', (e) => {

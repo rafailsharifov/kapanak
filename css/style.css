@@ -721,6 +721,12 @@ body {
     padding: var(--space-sm) 0;
 }
 
+.setting-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: var(--space-xs);
+}
+
 .settings-section .btn {
     margin-bottom: var(--space-sm);
 }
