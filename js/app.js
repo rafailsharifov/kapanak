@@ -722,9 +722,21 @@
     }
 
     /**
+     * Check if vibration is supported
+     */
+    function isVibrationSupported() {
+        return 'vibrate' in navigator;
+    }
+
+    /**
      * Toggle haptic feedback
      */
     function setHapticEnabled(enabled) {
+        if (enabled && !isVibrationSupported()) {
+            showToast('Vibration not supported on this device');
+            hapticToggle.checked = false;
+            return;
+        }
         hapticEnabled = enabled;
         localStorage.setItem('kapanak-haptic', enabled);
         hapticToggle.checked = enabled;
