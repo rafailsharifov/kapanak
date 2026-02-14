@@ -73,6 +73,9 @@
     // Toast element
     const toast = document.getElementById('toast');
 
+    // Version element
+    const appVersionEl = document.getElementById('app-version');
+
     /**
      * Show a screen, hide others
      * @param {string} screenName - Screen to show
@@ -656,6 +659,9 @@
         registerServiceWorker();
         await updateStats();
         showScreen('home');
+
+        // Set version from shared constant
+        appVersionEl.textContent = `Kapanak v${APP_VERSION}`;
 
         console.log('Kapanak initialized');
     }

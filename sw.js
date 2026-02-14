@@ -3,12 +3,14 @@
  * Handles offline caching and app installation
  */
 
-const CACHE_NAME = 'kapanak-v3';
+importScripts('/js/version.js');
+const CACHE_NAME = `kapanak-v${APP_VERSION}`;
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/manifest.json',
     '/css/style.css',
+    '/js/version.js',
     '/js/db.js',
     '/js/sm2.js',
     '/js/import.js',
