@@ -158,7 +158,7 @@
     }
 
     /**
-     * Start a practice session (all cards, no schedule updates)
+     * Start a practice session (all cards)
      */
     async function startPractice() {
         isPracticeMode = true;
@@ -169,8 +169,10 @@
             return;
         }
 
-        // Shuffle cards for practice
-        studyQueue = shuffleArray([...allCards]);
+        // Sort by dueDate (due soonest first)
+        studyQueue = allCards.sort((a, b) => {
+            return new Date(a.dueDate) - new Date(b.dueDate);
+        });
         currentCardIndex = 0;
         reviewedCount = 0;
         lastAction = null;
