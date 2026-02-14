@@ -1,10 +1,10 @@
-# Kapanak Architecture
+# 🦋 Kapanak Architecture
 
 High-level technical design for developers.
 
 ## Overview
 
-Kapanak is a **local-first Progressive Web App (PWA)** built with vanilla JavaScript. No frameworks, no backend - all logic runs in the browser.
+Kapanak is a **local-first Progressive Web App (PWA)** built with vanilla JavaScript. No frameworks, no backend - all logic runs in the browser. "Kapanak" means butterfly.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -66,6 +66,43 @@ kapanak/
 - **IndexedDB** via [Dexie.js](https://dexie.org/)
 - Database: `KapanakDB`
 - Table: `cards` (indexed by `id`, `dueDate`, `createdAt`)
+
+## Key Features Architecture
+
+### Card Flip Animation
+- Pure CSS 3D transform (`rotateY(180deg)`)
+- GPU-accelerated, no JavaScript overhead
+- `backface-visibility: hidden` for clean flip
+
+### Swipe Gestures
+- Touch events: `touchstart`, `touchmove`, `touchend`
+- Threshold-based detection (80px minimum)
+- Visual feedback during swipe with CSS transforms
+
+### Stats Dashboard
+- **Streak**: Stored in localStorage, checked against dates
+- **Mastery %**: Cards with 3+ repetitions / total cards
+- **Today's count**: Reset daily via date comparison
+
+### Sound Effects
+- Web Audio API (no external files)
+- Oscillator-based tones for different actions
+- User-toggleable via Settings
+
+### Confetti Animation
+- Dynamically created DOM elements
+- CSS keyframe animation for falling effect
+- Auto-cleanup after 4 seconds
+
+### Push Notifications
+- Uses Notification API with permission request
+- Checks daily at 9 AM if user hasn't studied
+- Stored preference in localStorage
+
+### Duplicate Detection
+- Case-insensitive comparison of front text
+- Uses Set for O(1) lookup performance
+- Prompts user before skipping duplicates
 
 ## Core Modules
 
@@ -151,9 +188,17 @@ let currentScreen = 'home'
 let studyQueue = []
 let currentCardIndex = 0
 let reviewedCount = 0
-let lastAction = null      // For undo
+let lastAction = null        // For undo
 let isPracticeMode = false
 let isDarkMode = false
+let isSwapped = false        // Swap front↔back
+let soundEnabled = false
+let notificationsEnabled = false
+
+// Swipe gesture state
+let touchStartX = 0
+let touchStartY = 0
+let isSwiping = false
 ```
 
 ## PWA Architecture

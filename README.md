@@ -1,6 +1,6 @@
-# Kapanak - Spaced Repetition Flashcards
+# 🦋 Kapanak - Spaced Repetition Flashcards
 
-A simple, offline-first flashcard app for language learning. Works on desktop and mobile browsers, installable as a PWA.
+A simple, offline-first flashcard app for language learning. Works on desktop and mobile browsers, installable as a PWA. "Kapanak" means butterfly.
 
 ## Features
 
@@ -10,6 +10,14 @@ A simple, offline-first flashcard app for language learning. Works on desktop an
 - **Dark Mode** - Auto-detects system preference or manual toggle
 - **Local Storage** - All data stays on your device, no account needed
 - **Import/Export** - Backup and restore your cards as JSON
+- **Card Flip Animation** - 3D flip effect when revealing answers
+- **Swipe Gestures** - Swipe left (Again), right (Good), up (Easy) on mobile
+- **Stats Dashboard** - Track streaks, mastery %, and daily progress
+- **Sound Effects** - Optional audio feedback (toggle in Settings)
+- **Confetti Celebration** - Fun animation when completing a session
+- **Daily Reminders** - Push notifications to remind you to study
+- **Duplicate Detection** - Warns when importing cards that already exist
+- **Swap Direction** - Toggle to study in reverse (e.g., English → Polish)
 
 ## Getting Started
 
@@ -49,13 +57,21 @@ Visit: `https://rafailsharifov.github.io/kapanak/`
 
 Both modes update the spaced repetition schedule.
 
-### Review Buttons
+### Review Options
 
+**Buttons:**
 | Button | Effect |
 |--------|--------|
 | **Again** | Card reappears in ~1 minute |
 | **Good** | Card scheduled for 1-6+ days |
 | **Easy** | Card scheduled for longer interval |
+
+**Swipe Gestures (Mobile):**
+| Swipe | Action |
+|-------|--------|
+| ← Left | Again |
+| → Right | Good |
+| ↑ Up | Easy |
 
 ### Manage Cards
 - Tap **Manage Cards** to view all cards
