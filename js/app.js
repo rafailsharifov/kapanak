@@ -50,6 +50,7 @@
     const manageBtn = document.getElementById('manage-btn');
     const manageBackBtn = document.getElementById('manage-back-btn');
     const cardList = document.getElementById('card-list');
+    const manageSearch = document.getElementById('manage-search');
     const emptyState = document.getElementById('empty-state');
 
     // Edit modal elements
@@ -448,21 +449,34 @@
     /**
      * Render the card list in manage screen
      */
-    async function renderCardList() {
-        const cards = await CardDB.getAllCards();
+    async function renderCardList(query = '') {
+        const allCards = await CardDB.getAllCards();
         const collator = new Intl.Collator('pl', { sensitivity: 'base' });
 
         // Sort cards alphabetically by front
-        cards.sort((a, b) => collator.compare(a.front, b.front));
+        allCards.sort((a, b) => collator.compare(a.front, b.front));
 
-        if (cards.length === 0) {
+        // Filter by search query
+        const q = query.trim().toLowerCase();
+        const cards = q
+            ? allCards.filter(c => c.front.toLowerCase().includes(q) || c.back.toLowerCase().includes(q))
+            : allCards;
+
+        if (allCards.length === 0) {
             cardList.classList.add('hidden');
             emptyState.classList.remove('hidden');
             return;
         }
 
-        cardList.classList.remove('hidden');
         emptyState.classList.add('hidden');
+
+        if (cards.length === 0) {
+            cardList.classList.remove('hidden');
+            cardList.innerHTML = '<div class="empty-state"><p>No cards match your search.</p></div>';
+            return;
+        }
+
+        cardList.classList.remove('hidden');
 
         cardList.innerHTML = cards.map(card => `
             <div class="card-item" data-id="${card.id}">
@@ -1035,8 +1049,13 @@
 
         // Manage button (now in settings)
         manageBtn.addEventListener('click', async () => {
+            manageSearch.value = '';
             await renderCardList();
             showScreen('manage');
+        });
+
+        manageSearch.addEventListener('input', () => {
+            renderCardList(manageSearch.value);
         });
 
         // Study screen - click to flip
