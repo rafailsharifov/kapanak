@@ -171,5 +171,6 @@ window.SM2 = {
     calculateNextReview,
     getIntervalHint,
     sortCardsForReview,
+    LEARNING_COUNT,
     MASTERY_THRESHOLD
 };

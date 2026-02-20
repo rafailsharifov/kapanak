@@ -37,8 +37,14 @@
     const todayReviewedEl = document.getElementById('today-reviewed');
     const streakBanner = document.getElementById('streak-banner');
     const streakText = document.getElementById('streak-text');
-    const masteredPercent = document.getElementById('mastered-percent');
-    const masteryFill = document.getElementById('mastery-fill');
+    const pipelineNew = document.getElementById('pipeline-new');
+    const pipelineLearning = document.getElementById('pipeline-learning');
+    const pipelineGraduated = document.getElementById('pipeline-graduated');
+    const pipelineMature = document.getElementById('pipeline-mature');
+    const pipelineSegNew = document.getElementById('pipeline-seg-new');
+    const pipelineSegLearning = document.getElementById('pipeline-seg-learning');
+    const pipelineSegGraduated = document.getElementById('pipeline-seg-graduated');
+    const pipelineSegMature = document.getElementById('pipeline-seg-mature');
     const swapToggle = document.getElementById('swap-toggle');
     const swapLabel = document.getElementById('swap-label');
     const studyBtn = document.getElementById('study-btn');
@@ -147,11 +153,36 @@
         dueCountEl.textContent = dueCount;
         totalCountEl.textContent = totalCount;
 
-        // Calculate mastered cards (completed all learning + graduated phases)
-        const masteredCount = allCards.filter(c => c.repetitions >= SM2.MASTERY_THRESHOLD).length;
-        const masteredPct = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
-        masteredPercent.textContent = `${masteredCount} / ${totalCount}`;
-        masteryFill.style.width = `${masteredPct}%`;
+        // Calculate pipeline counts
+        // New: never seen (rep 0, no reviews)
+        // Learning: actively drilling (rep 0 failed + rep 1-2: 10min, 1d, 3d)
+        // Graduated: strengthening (rep 3-4: 7d, 14d)
+        // Mastered: mature phase (rep 5+)
+        const MT = SM2.MASTERY_THRESHOLD;
+        let newCount = 0, learningCount = 0, graduatedCount = 0, matureCount = 0;
+        for (const c of allCards) {
+            if (c.repetitions === 0 && !c.lastReviewed) newCount++;
+            else if (c.repetitions < 3) learningCount++;
+            else if (c.repetitions < MT) graduatedCount++;
+            else matureCount++;
+        }
+        pipelineNew.textContent = newCount;
+        pipelineLearning.textContent = learningCount;
+        pipelineGraduated.textContent = graduatedCount;
+        pipelineMature.textContent = matureCount;
+
+        // Update segmented bar
+        if (totalCount > 0) {
+            pipelineSegNew.style.width = `${(newCount / totalCount) * 100}%`;
+            pipelineSegLearning.style.width = `${(learningCount / totalCount) * 100}%`;
+            pipelineSegGraduated.style.width = `${(graduatedCount / totalCount) * 100}%`;
+            pipelineSegMature.style.width = `${(matureCount / totalCount) * 100}%`;
+        } else {
+            pipelineSegNew.style.width = '0%';
+            pipelineSegLearning.style.width = '0%';
+            pipelineSegGraduated.style.width = '0%';
+            pipelineSegMature.style.width = '0%';
+        }
 
         // Get today's reviewed count from localStorage
         const today = new Date().toDateString();

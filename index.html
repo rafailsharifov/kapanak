@@ -40,13 +40,33 @@
                         <span class="streak-text" id="streak-text">0 day streak</span>
                     </div>
 
-                    <div class="progress-card">
-                        <div class="progress-label">
-                            <span>Mastered</span>
-                            <span id="mastered-percent">0 / 0</span>
+                    <div class="pipeline-card">
+                        <div class="pipeline-boxes">
+                            <div class="pipeline-box pipeline-new">
+                                <span class="pipeline-count" id="pipeline-new">0</span>
+                                <span class="pipeline-label">New</span>
+                            </div>
+                            <div class="pipeline-arrow">›</div>
+                            <div class="pipeline-box pipeline-learning">
+                                <span class="pipeline-count" id="pipeline-learning">0</span>
+                                <span class="pipeline-label">Learning</span>
+                            </div>
+                            <div class="pipeline-arrow">›</div>
+                            <div class="pipeline-box pipeline-graduated">
+                                <span class="pipeline-count" id="pipeline-graduated">0</span>
+                                <span class="pipeline-label">Graduated</span>
+                            </div>
+                            <div class="pipeline-arrow">›</div>
+                            <div class="pipeline-box pipeline-mature">
+                                <span class="pipeline-count" id="pipeline-mature">0</span>
+                                <span class="pipeline-label">Mastered</span>
+                            </div>
                         </div>
-                        <div class="mastery-bar">
-                            <div class="mastery-fill" id="mastery-fill"></div>
+                        <div class="pipeline-bar">
+                            <div class="pipeline-segment pipeline-seg-new" id="pipeline-seg-new"></div>
+                            <div class="pipeline-segment pipeline-seg-learning" id="pipeline-seg-learning"></div>
+                            <div class="pipeline-segment pipeline-seg-graduated" id="pipeline-seg-graduated"></div>
+                            <div class="pipeline-segment pipeline-seg-mature" id="pipeline-seg-mature"></div>
                         </div>
                     </div>
 
