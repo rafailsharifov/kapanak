@@ -146,8 +146,8 @@
         dueCountEl.textContent = dueCount;
         totalCountEl.textContent = totalCount;
 
-        // Calculate mastered cards (cards with 3+ successful repetitions)
-        const masteredCount = allCards.filter(c => c.repetitions >= 3).length;
+        // Calculate mastered cards (completed all learning + graduated phases)
+        const masteredCount = allCards.filter(c => c.repetitions >= SM2.MASTERY_THRESHOLD).length;
         const masteredPct = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
         masteredPercent.textContent = `${masteredCount} / ${totalCount}`;
         masteryFill.style.width = `${masteredPct}%`;
@@ -274,9 +274,10 @@
             return;
         }
 
-        // Sort by dueDate (due soonest first)
+        // Sort by dueDate (due soonest first), randomize ties
         studyQueue = allCards.sort((a, b) => {
-            return new Date(a.dueDate) - new Date(b.dueDate);
+            const diff = new Date(a.dueDate) - new Date(b.dueDate);
+            return diff !== 0 ? diff : Math.random() - 0.5;
         });
         currentCardIndex = 0;
         reviewedCount = 0;
