@@ -316,17 +316,18 @@
         progressFill.style.width = `${progress}%`;
         progressText.textContent = `${currentCardIndex} / ${studyQueue.length}`;
 
+        // Reset flip state instantly (no reverse-flip animation)
+        flashcard.style.transition = 'none';
+        flashcard.classList.remove('flipped', 'swiping-left', 'swiping-right', 'swiping-up');
+        // Force reflow, then set content and restore transition
+        flashcard.offsetHeight;
+
         // Show front, hide back (swap if enabled)
         const displayFront = isSwapped ? card.back : card.front;
         const displayBack = isSwapped ? card.front : card.back;
         cardFront.textContent = displayFront;
         cardBack.textContent = displayBack;
 
-        // Reset flip state instantly (no reverse-flip animation)
-        flashcard.style.transition = 'none';
-        flashcard.classList.remove('flipped', 'swiping-left', 'swiping-right', 'swiping-up');
-        // Force reflow, then restore transition for next flip
-        flashcard.offsetHeight;
         flashcard.style.transition = '';
         tapHint.classList.remove('hidden');
         reviewButtons.classList.add('hidden');
