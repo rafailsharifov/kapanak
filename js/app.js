@@ -149,7 +149,7 @@
         // Calculate mastered cards (cards with 3+ successful repetitions)
         const masteredCount = allCards.filter(c => c.repetitions >= 3).length;
         const masteredPct = totalCount > 0 ? Math.round((masteredCount / totalCount) * 100) : 0;
-        masteredPercent.textContent = `${masteredPct}%`;
+        masteredPercent.textContent = `${masteredCount} / ${totalCount}`;
         masteryFill.style.width = `${masteredPct}%`;
 
         // Get today's reviewed count from localStorage
@@ -320,8 +320,12 @@
         cardFront.textContent = displayFront;
         cardBack.textContent = displayBack;
 
-        // Reset flip state
+        // Reset flip state instantly (no reverse-flip animation)
+        flashcard.style.transition = 'none';
         flashcard.classList.remove('flipped', 'swiping-left', 'swiping-right', 'swiping-up');
+        // Force reflow, then restore transition for next flip
+        flashcard.offsetHeight;
+        flashcard.style.transition = '';
         tapHint.classList.remove('hidden');
         reviewButtons.classList.add('hidden');
 
