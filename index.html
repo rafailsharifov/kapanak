@@ -231,6 +231,12 @@
                     <input type="text" id="manage-search" placeholder="Search cards..." autocomplete="off">
                 </div>
 
+                <div class="sort-chips" id="sort-chips">
+                    <button class="sort-chip active" data-sort="due">Due first</button>
+                    <button class="sort-chip" data-sort="newest">Newest</button>
+                    <button class="sort-chip" data-sort="alpha">A–Z</button>
+                </div>
+
                 <div class="card-list" id="card-list">
                     <!-- Cards will be populated here -->
                 </div>
@@ -286,17 +292,6 @@
                         </svg>
                         Manage Cards
                     </button>
-                </div>
-
-                <div class="settings-section">
-                    <h3>Feedback</h3>
-                    <div class="setting-item">
-                        <span>Sound Effects</span>
-                        <label class="toggle">
-                            <input type="checkbox" id="sound-toggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
                 </div>
 
                 <div class="settings-section">

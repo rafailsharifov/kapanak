@@ -15,8 +15,8 @@
     let isDarkMode = false;
     let isPracticeMode = false; // Practice mode doesn't affect scheduling
     let isSwapped = false; // Swap front↔back display
-    let soundEnabled = false;
     let notificationsEnabled = false;
+    let manageSortMode = 'due'; // 'due' | 'newest' | 'alpha'
 
     // DOM Elements
     const screens = {
@@ -57,6 +57,7 @@
     const manageBackBtn = document.getElementById('manage-back-btn');
     const cardList = document.getElementById('card-list');
     const manageSearch = document.getElementById('manage-search');
+    const sortChips = document.getElementById('sort-chips');
     const emptyState = document.getElementById('empty-state');
 
     // Edit modal elements
@@ -98,7 +99,6 @@
 
     // Settings screen elements
     const settingsBackBtn = document.getElementById('settings-back-btn');
-    const soundToggle = document.getElementById('sound-toggle');
     const notificationToggle = document.getElementById('notification-toggle');
     const notificationHint = document.getElementById('notification-hint');
     const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -375,7 +375,6 @@
         flashcard.classList.add('flipped');
         tapHint.classList.add('hidden');
         reviewButtons.classList.remove('hidden');
-        playSound('flip');
     }
 
     /**
@@ -406,13 +405,6 @@
 
         // Track review
         incrementTodayCount();
-
-        // Sound feedback
-        if (quality === 0) {
-            playSound('again');
-        } else {
-            playSound('success');
-        }
 
         // If "Again" (quality 0), card stays in queue at end
         if (quality === 0) {
@@ -474,7 +466,6 @@
         showScreen('complete');
 
         // Celebration effects
-        playSound('complete');
         showConfetti();
     }
 
@@ -485,8 +476,17 @@
         const allCards = await CardDB.getAllCards();
         const collator = new Intl.Collator('pl', { sensitivity: 'base' });
 
-        // Sort cards alphabetically by front
-        allCards.sort((a, b) => collator.compare(a.front, b.front));
+        // Sort based on current mode
+        if (manageSortMode === 'alpha') {
+            allCards.sort((a, b) => collator.compare(a.front, b.front));
+        } else if (manageSortMode === 'newest') {
+            allCards.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        } else {
+            // 'due' — cards needing practice first, then by due date
+            allCards.sort((a, b) => {
+                return new Date(a.dueDate) - new Date(b.dueDate);
+            });
+        }
 
         // Filter by search query
         const q = query.trim().toLowerCase();
@@ -757,48 +757,7 @@
         swapLabel.textContent = enabled ? 'Back → Front' : 'Front → Back';
     }
 
-    /**
-     * Toggle sound effects
-     */
-    function setSoundEnabled(enabled) {
-        soundEnabled = enabled;
-        localStorage.setItem('kapanak-sound', enabled);
-        soundToggle.checked = enabled;
-    }
 
-
-    /**
-     * Play sound effect
-     */
-    function playSound(type) {
-        if (!soundEnabled) return;
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        // Different sounds for different actions
-        if (type === 'success') {
-            oscillator.frequency.value = 800;
-            gainNode.gain.value = 0.1;
-        } else if (type === 'again') {
-            oscillator.frequency.value = 300;
-            gainNode.gain.value = 0.1;
-        } else if (type === 'flip') {
-            oscillator.frequency.value = 600;
-            gainNode.gain.value = 0.05;
-        } else if (type === 'complete') {
-            oscillator.frequency.value = 1000;
-            gainNode.gain.value = 0.1;
-        }
-
-        oscillator.start();
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    }
 
     /**
      * Show confetti animation
@@ -910,10 +869,6 @@
         // Load swap mode preference
         const storedSwap = localStorage.getItem('kapanak-swap-mode');
         setSwapMode(storedSwap === 'true');
-
-        // Load sound preference
-        const storedSound = localStorage.getItem('kapanak-sound');
-        setSoundEnabled(storedSound === 'true');
 
         // Load notification preference
         const storedNotifications = localStorage.getItem('kapanak-notifications');
@@ -1082,11 +1037,24 @@
         // Manage button (now in settings)
         manageBtn.addEventListener('click', async () => {
             manageSearch.value = '';
+            manageSortMode = 'due';
+            sortChips.querySelectorAll('.sort-chip').forEach(c => {
+                c.classList.toggle('active', c.dataset.sort === 'due');
+            });
             await renderCardList();
             showScreen('manage');
         });
 
         manageSearch.addEventListener('input', () => {
+            renderCardList(manageSearch.value);
+        });
+
+        sortChips.addEventListener('click', (e) => {
+            const chip = e.target.closest('.sort-chip');
+            if (!chip) return;
+            manageSortMode = chip.dataset.sort;
+            sortChips.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
             renderCardList(manageSearch.value);
         });
 
@@ -1165,11 +1133,6 @@
         settingsBackBtn.addEventListener('click', async () => {
             await updateStats();
             showScreen('home');
-        });
-
-        soundToggle.addEventListener('change', (e) => {
-            setSoundEnabled(e.target.checked);
-            if (e.target.checked) playSound('success');
         });
 
         notificationToggle.addEventListener('change', (e) => {

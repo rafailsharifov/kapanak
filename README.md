@@ -12,8 +12,7 @@ A simple, offline-first flashcard app for language learning. Works on desktop an
 - **Import/Export** - Backup and restore your cards as JSON
 - **Card Flip Animation** - 3D flip effect when revealing answers
 - **Swipe Gestures** - Swipe left (Again), right (Good), up (Easy) on mobile
-- **Stats Dashboard** - Track streaks, mastery %, and daily progress
-- **Sound Effects** - Optional audio feedback (toggle in Settings)
+- **Leitner Pipeline** - Visual pipeline showing cards across phases (New → Learning → Graduated → Mastered)
 - **Confetti Celebration** - Fun animation when completing a session
 - **Daily Reminders** - Push notifications to remind you to study
 - **Duplicate Detection** - Warns when importing cards that already exist
@@ -63,8 +62,8 @@ Both modes update the spaced repetition schedule.
 | Button | Effect |
 |--------|--------|
 | **Again** | Card reappears in ~1 minute |
-| **Good** | Card scheduled for 1-6+ days |
-| **Easy** | Card scheduled for longer interval |
+| **Good** | Graduated schedule: 10min → 1d → 3d → 7d → 14d → SM-2 |
+| **Easy** | Skips one step in the schedule |
 
 **Swipe Gestures (Mobile):**
 | Swipe | Action |
@@ -75,6 +74,8 @@ Both modes update the spaced repetition schedule.
 
 ### Manage Cards
 - Tap **Manage Cards** to view all cards
+- Sort by: **Due first** (default), **Newest**, or **A–Z**
+- Search cards by front or back text
 - Tap pencil icon to edit a card
 - Tap trash icon to delete a card
 

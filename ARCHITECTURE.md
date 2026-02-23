@@ -81,13 +81,8 @@ kapanak/
 
 ### Stats Dashboard
 - **Streak**: Stored in localStorage, checked against dates
-- **Mastery %**: Cards with 3+ repetitions / total cards
+- **Leitner Pipeline**: Visual breakdown of cards by phase (New → Learning → Graduated → Mastered)
 - **Today's count**: Reset daily via date comparison
-
-### Sound Effects
-- Web Audio API (no external files)
-- Oscillator-based tones for different actions
-- User-toggleable via Settings
 
 ### Confetti Animation
 - Dynamically created DOM elements
@@ -134,6 +129,8 @@ window.SM2 = {
   calculateNextReview(card, quality)  // Returns updated card
   getIntervalHint(card, quality)      // Human-readable interval
   sortCardsForReview(cards)           // Sort for study session
+  LEARNING_COUNT                      // Sub-day learning step count (1)
+  MASTERY_THRESHOLD                   // Reps needed for mastery (5)
 }
 ```
 
@@ -142,14 +139,21 @@ window.SM2 = {
 - 3 = Good (correct with effort)
 - 5 = Easy (perfect recall)
 
-**Algorithm Summary:**
+**Graduated Algorithm:**
 ```
 if quality < 3:
-    reset repetitions, interval = 0
-else:
-    if repetitions == 0: interval = 1 day
-    elif repetitions == 1: interval = 6 days
-    else: interval = interval × easeFactor
+    reset repetitions to 0, due in 1 minute
+
+if quality >= 3 (graduated schedule):
+    rep 0 → 10 minutes  (learning phase)
+    rep 1 → 1 day        (graduated phase)
+    rep 2 → 3 days
+    rep 3 → 7 days
+    rep 4 → 14 days
+    rep 5+ → interval × easeFactor  (mature, standard SM-2)
+
+if quality == 5 (Easy):
+    skip one step in the schedule, or 1.3× bonus in mature phase
 
 easeFactor += 0.1 - (5 - quality) × (0.08 + (5 - quality) × 0.02)
 easeFactor = max(1.3, easeFactor)
@@ -192,8 +196,8 @@ let lastAction = null        // For undo
 let isPracticeMode = false
 let isDarkMode = false
 let isSwapped = false        // Swap front↔back
-let soundEnabled = false
 let notificationsEnabled = false
+let manageSortMode = 'due'   // 'due' | 'newest' | 'alpha'
 
 // Swipe gesture state
 let touchStartX = 0
@@ -292,9 +296,9 @@ getDueCards() → sortCardsForReview() → showCard() → handleReview()
 
 ### Practice Flow
 ```
-getAllCards() → shuffleArray() → showCard() → handleReview()
-                                                    ↓
-                                         (no database update)
+getAllCards() → sort by dueDate (randomize ties) → showCard() → handleReview()
+                                                                      ↓
+                                                        calculateNextReview() → updateCard()
 ```
 
 ## Extending the App
