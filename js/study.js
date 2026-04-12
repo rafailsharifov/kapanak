@@ -332,7 +332,7 @@ window.StudyModule = (function () {
         });
         document.getElementById('back-home-btn').addEventListener('click', async () => {
             if (isPageStudy) {
-                await NotebookModule.open();
+                await NotebookModule.resume();
             } else {
                 await StatsModule.update();
                 UI.showScreen('home');

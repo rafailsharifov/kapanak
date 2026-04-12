@@ -278,6 +278,20 @@ window.NotebookModule = (function () {
         UI.showScreen('notebook');
     }
 
+    // Re-open notebook keeping the current page (used after page-primed study)
+    async function resume() {
+        const [all, due] = await Promise.all([CardDB.getAllCards(), CardDB.getDueCards()]);
+        allCards     = _sortCards(all);
+        dueIds       = new Set(due.map(c => c.id));
+        unlearnedIds = new Set(all.filter(c => c.repetitions === 0 && !c.lastReviewed).map(c => c.id));
+        // Clamp page in case cards were deleted
+        const maxPage = Math.max(0, _totalPages() - 1);
+        if (currentPage > maxPage) currentPage = maxPage;
+        cellOverrides.clear();
+        _render();
+        UI.showScreen('notebook');
+    }
+
     // ── init ──────────────────────────────────────────────────────────────────
 
     function init() {
@@ -311,5 +325,5 @@ window.NotebookModule = (function () {
         document.getElementById('notebook-btn').addEventListener('click', open);
     }
 
-    return { init, open };
+    return { init, open, resume };
 })();
