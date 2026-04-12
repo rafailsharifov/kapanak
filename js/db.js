@@ -6,10 +6,18 @@
 // Initialize Dexie database
 const db = new Dexie('KapanakDB');
 
-// Define schema - version 1
+// Version 1 — original schema
 db.version(1).stores({
-    // Primary key is 'id', indexed fields for querying
     cards: 'id, dueDate, createdAt'
+});
+
+// Version 2 — added anchor (memory mnemonic) field
+db.version(2).stores({
+    cards: 'id, dueDate, createdAt'
+}).upgrade(tx => {
+    return tx.table('cards').toCollection().modify(card => {
+        if (card.anchor === undefined) card.anchor = '';
+    });
 });
 
 /**
@@ -42,7 +50,8 @@ function createCard(front, back) {
         repetitions: 0,        // Number of successful reviews
         dueDate: now.toISOString(),
         lastReviewed: null,
-        createdAt: now.toISOString()
+        createdAt: now.toISOString(),
+        anchor: ''          // Memory mnemonic / visual image note
     };
 }
 

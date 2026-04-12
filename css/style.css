@@ -1118,8 +1118,316 @@ body {
     }
 }
 
-/* Focus styles for accessibility */
-:focus-visible {
+/* ── Study screen extras ─────────────────────────────────────────────────── */
+
+.card-position {
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-align: center;
+    margin-bottom: var(--space-xs);
+}
+
+.card-anchor {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    margin-top: var(--space-sm);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--accent);
+    max-width: 100%;
+}
+
+/* ── Notebook screen ─────────────────────────────────────────────────────── */
+
+.notebook-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.notebook-header h2 {
+    font-size: 1.25rem;
+    flex: 1;
+}
+
+.nb-page-indicator {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* Filter chips */
+.nb-filter-bar {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+}
+
+.nb-filter-btn {
+    flex: 1;
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+}
+
+.nb-filter-btn.active {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: #ffffff;
+}
+
+/* Controls bar */
+.nb-controls {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.nb-ctrl-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+}
+
+.nb-ctrl-btn.active {
+    background-color: color-mix(in srgb, var(--accent) 15%, var(--bg-card));
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Grid */
+.nb-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-rows: 1fr;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+    min-height: 0; /* needed for flex children to shrink properly */
+}
+
+/* Cell — default (highlighted, text centered auto-sized) */
+.nb-cell {
+    position: relative;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm) var(--space-xs);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+    overflow: hidden;
+}
+
+.nb-cell:active {
+    transform: scale(0.96);
+    transition: transform 80ms;
+}
+
+/* Due — blue-ish glow + left border */
+.nb-cell.nb-cell-due {
+    border-color: var(--accent);
+    border-left-width: 3px;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Unlearned — green tint */
+.nb-cell.nb-cell-new {
+    border-color: var(--success);
+    border-left-width: 3px;
+    box-shadow: 0 0 6px color-mix(in srgb, var(--success) 20%, transparent);
+}
+
+/* Dimmed (filter active, card doesn't match) — small text, top-left, muted */
+.nb-cell.nb-cell-dim {
+    opacity: 0.45;
+    align-items: flex-start;
+    justify-content: flex-start;
+    box-shadow: none;
+    border-color: var(--border);
+    border-left-width: 1px;
+}
+
+.nb-cell.nb-cell-dim .nb-primary {
+    font-size: 0.72rem !important;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+/* Position badge */
+.nb-badge {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+/* Primary text (auto-sized via JS) */
+.nb-primary {
+    font-size: 1rem; /* fallback, overridden by JS */
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+    word-break: break-word;
+    text-align: center;
+}
+
+/* Secondary (translation overlay) */
+.nb-secondary {
+    font-size: 0.72rem;
+    color: var(--accent);
+    line-height: 1.4;
+    word-break: break-word;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.nb-cell.nb-cell-dim .nb-secondary {
+    display: none;
+}
+
+/* Anchor */
+.nb-anchor {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-style: italic;
+    line-height: 1.2;
+    margin-top: 2px;
+    text-align: center;
+}
+
+/* Page dots */
+.nb-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: var(--space-xs) 0 var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.nb-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.nb-dot:hover {
+    background: var(--text-muted);
+    transform: scale(1.2);
+}
+
+.nb-dot.nb-dot-current {
+    background: #ffffff;
+    width: 14px;
+    height: 14px;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.nb-dot.nb-dot-due {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.nb-dot.nb-dot-new {
+    outline: 2px solid var(--success);
+    outline-offset: 1px;
+}
+
+/* Current dot keeps its white color even when page has due/new cards */
+.nb-dot.nb-dot-current.nb-dot-due,
+.nb-dot.nb-dot-current.nb-dot-new {
+    background: #ffffff;
+    outline: none;
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.nb-dot-gap {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+/* Footer */
+.nb-footer {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--border);
+}
+
+.nb-footer .btn-primary {
+    flex: 1;
+}
+
+.notebook-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    padding: var(--space-xl);
+}
+
+/* ── Manage card anchor display ──────────────────────────────────────────── */
+
+.card-item-anchor {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Form hint text ──────────────────────────────────────────────────────── */
+
+.form-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }

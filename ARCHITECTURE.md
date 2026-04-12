@@ -6,12 +6,14 @@ High-level technical design for developers.
 
 Kapanak is a **local-first Progressive Web App (PWA)** built with vanilla JavaScript. No frameworks, no backend - all logic runs in the browser. "Kapanak" means butterfly.
 
+The app combines **SM-2 spaced repetition** with a **spatial memory notebook** — a fixed-position grid view that leverages positional/visuospatial memory for stronger recall.
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      Browser                            │
 │  ┌───────────────┐  ┌───────────────┐  ┌─────────────┐ │
 │  │    UI Layer   │  │  App Logic    │  │   Storage   │ │
-│  │  (HTML/CSS)   │◄─┤   (app.js)    │◄─┤ (IndexedDB) │ │
+│  │  (HTML/CSS)   │◄─┤  (modules)    │◄─┤ (IndexedDB) │ │
 │  └───────────────┘  └───────────────┘  └─────────────┘ │
 │                            │                            │
 │                     ┌──────┴──────┐                     │
@@ -38,20 +40,45 @@ kapanak/
 │   ├── version.js      # Single source of truth for version
 │   ├── db.js           # IndexedDB operations via Dexie.js
 │   ├── sm2.js          # SM-2 spaced repetition algorithm
-│   ├── import.js       # Text parser for card import
-│   └── app.js          # Main application logic & UI
+│   ├── import.js       # Text parser + import screen UI
+│   ├── ui.js           # Shared UI state & utilities
+│   ├── stats.js        # Home screen stats & streak
+│   ├── study.js        # Study/practice session logic
+│   ├── manage.js       # Card management screen
+│   ├── settings.js     # Preferences & data management
+│   ├── notebook.js     # Spatial notebook view
+│   └── app.js          # Entry point, module init
 └── icons/              # PWA icons (72px - 512px)
 ```
 
+## Modular Architecture
+
+The app uses a **module pattern** with `window.*` globals. Each module is an IIFE that exposes a public API.
+
+| Module | Global | Responsibility |
+|--------|--------|---------------|
+| `ui.js` | `window.UI` | Shared state (screen, theme, swap), `showScreen()`, `showToast()`, `escapeHtml()` |
+| `stats.js` | `window.StatsModule` | Home dashboard, pipeline bar, streak, today count |
+| `study.js` | `window.StudyModule` | Due/practice/page-primed sessions, swipe, keyboard, undo |
+| `manage.js` | `window.ManageModule` | Card list, search, sort, edit modal |
+| `settings.js` | `window.SettingsModule` | Dark mode, swap, notifications, export/import/delete |
+| `notebook.js` | `window.NotebookModule` | Spatial grid view, filters, flip/translation toggles, page dots |
+| `import.js` | `window.ImportParser` + `window.ImportModule` | Text parser + import screen with duplicate detection |
+| `app.js` | — | Entry point: init all modules, wire home buttons |
+
+**Module load order** (defined in `index.html` script tags):
+`version → db → sm2 → import → ui → stats → study → manage → settings → notebook → app`
+
 ## Data Model
 
-### Card Schema
+### Card Schema (v2)
 
 ```javascript
 {
   id: string,           // UUID v4
   front: string,        // Question/prompt
   back: string,         // Answer
+  anchor: string,       // Memory mnemonic / visual image note (optional)
   interval: number,     // Days until next review
   easeFactor: number,   // SM-2 difficulty (default: 2.5)
   repetitions: number,  // Consecutive correct answers
@@ -66,8 +93,23 @@ kapanak/
 - **IndexedDB** via [Dexie.js](https://dexie.org/)
 - Database: `KapanakDB`
 - Table: `cards` (indexed by `id`, `dueDate`, `createdAt`)
+- Schema v2 adds `anchor` field with auto-migration
 
 ## Key Features Architecture
+
+### Notebook View (Spatial Memory)
+
+Designed around **visuospatial memory** — cards are assigned permanent positions based on creation order.
+
+- Fixed 3×4 grid (12 cards per page), newest page first
+- Cards never change position — spatial anchor is stable
+- Auto-sized text: font scales inversely with word length, centered in cell
+- Multi-value text (e.g. `friend / familiar`) splits on separators and renders line-by-line
+- **Filters**: All / Due — due cards get a glowing border, non-matching cells dim
+- **Controls**: "With Translation" toggle + "Flip All" toggle (independent of each other)
+- Individual cell tap flips that cell (XOR with global flip state)
+- **Page dots** with due-card indicators; current page highlighted in white
+- **Page-primed study**: browse a page first (spatial pre-load), then quiz those cards
 
 ### Card Flip Animation
 - Pure CSS 3D transform (`rotateY(180deg)`)
@@ -84,20 +126,18 @@ kapanak/
 - **Leitner Pipeline**: Visual breakdown of cards by phase (New → Learning → Graduated → Mastered)
 - **Today's count**: Reset daily via date comparison
 
-### Confetti Animation
-- Dynamically created DOM elements
-- CSS keyframe animation for falling effect
-- Auto-cleanup after 4 seconds
+### Study Session
+- Position hint (`Pg X · #Y`) shown during page-primed study
+- Memory anchor hint shown on card front (if set)
+- Undo last review action
 
 ### Push Notifications
 - Uses Notification API with permission request
 - Checks daily at 9 AM if user hasn't studied
-- Stored preference in localStorage
 
 ### Duplicate Detection
 - Case-insensitive comparison of front text
 - Uses Set for O(1) lookup performance
-- Prompts user before skipping duplicates
 
 ## Core Modules
 
@@ -105,7 +145,7 @@ kapanak/
 
 ```javascript
 window.CardDB = {
-  createCard(front, back)    // Create new card with SM-2 defaults
+  createCard(front, back)    // Create new card with SM-2 defaults + empty anchor
   addCards(cards)            // Bulk insert
   getAllCards()              // Get all cards
   getDueCards()              // Get cards where dueDate <= now
@@ -134,34 +174,7 @@ window.SM2 = {
 }
 ```
 
-**Quality Ratings:**
-- 0 = Again (complete failure)
-- 3 = Good (correct with effort)
-- 5 = Easy (perfect recall)
-
-**Graduated Algorithm:**
-```
-if quality < 3:
-    reset repetitions to 0, due in 1 minute
-
-if quality >= 3 (graduated schedule):
-    rep 0 → 10 minutes  (learning phase)
-    rep 1 → 1 day        (graduated phase)
-    rep 2 → 3 days
-    rep 3 → 7 days
-    rep 4 → 14 days
-    rep 5+ → interval × easeFactor  (mature, standard SM-2)
-
-if quality == 5 (Easy):
-    skip one step in the schedule, or 1.3× bonus in mature phase
-
-easeFactor += 0.1 - (5 - quality) × (0.08 + (5 - quality) × 0.02)
-easeFactor = max(1.3, easeFactor)
-```
-
-### 3. import.js - Card Parser
-
-Simple text format parser:
+### 3. import.js - Card Parser + Import Screen
 
 ```javascript
 window.ImportParser = {
@@ -169,40 +182,16 @@ window.ImportParser = {
   countValidCards(text)    // Preview count
   importFromText(text)     // Full pipeline to card objects
 }
+window.ImportModule = { init() }  // Import screen UI with duplicate detection
 ```
 
-**Format Rules:**
-- One card per line
-- First comma separates front/back
-- Empty lines ignored
-- UTF-8 (Polish safe)
+### 4. notebook.js - Spatial Notebook
 
-### 4. app.js - Application Controller
-
-Main module handling:
-- Screen navigation
-- Event listeners
-- Study session state
-- UI updates
-- Settings management
-
-**State Variables:**
 ```javascript
-let currentScreen = 'home'
-let studyQueue = []
-let currentCardIndex = 0
-let reviewedCount = 0
-let lastAction = null        // For undo
-let isPracticeMode = false
-let isDarkMode = false
-let isSwapped = false        // Swap front↔back
-let notificationsEnabled = false
-let manageSortMode = 'due'   // 'due' | 'newest' | 'alpha'
-
-// Swipe gesture state
-let touchStartX = 0
-let touchStartY = 0
-let isSwiping = false
+window.NotebookModule = {
+  init()                   // Wire up DOM and events
+  open()                   // Load cards, reset state, show screen
+}
 ```
 
 ## PWA Architecture
@@ -211,19 +200,8 @@ let isSwiping = false
 
 **Caching Strategy:** Cache-first with network fallback
 
-```javascript
-// Install: Cache all assets
-self.addEventListener('install', ...)
-
-// Activate: Clean old caches
-self.addEventListener('activate', ...)
-
-// Fetch: Serve from cache, fallback to network
-self.addEventListener('fetch', ...)
-```
-
 **Cached Assets:**
-- HTML, CSS, JS files
+- HTML, CSS, all JS modules
 - Icons
 - Dexie.js CDN
 
@@ -231,19 +209,6 @@ self.addEventListener('fetch', ...)
 - `version.js` defines `APP_VERSION`
 - Service worker uses: `CACHE_NAME = 'kapanak-v${APP_VERSION}'`
 - Changing version triggers cache refresh
-
-### manifest.json
-
-```json
-{
-  "name": "Kapanak - Spaced Repetition Flashcards",
-  "short_name": "Kapanak",
-  "display": "standalone",
-  "start_url": "/",
-  "theme_color": "#1a1a2e",
-  "background_color": "#1a1a2e"
-}
-```
 
 ## UI Architecture
 
@@ -258,7 +223,10 @@ Single-page app with multiple "screens" (sections):
 | Complete | `complete-screen` | Session summary |
 | Import | `import-screen` | Add new cards |
 | Manage | `manage-screen` | View/edit/delete cards |
+| Notebook | `notebook-screen` | Spatial grid view |
 | Settings | `settings-screen` | Preferences, data |
+
+Navigation: `UI.showScreen('name')` — uses `getElementById(name + '-screen')`.
 
 ### CSS Architecture
 
@@ -266,19 +234,6 @@ Single-page app with multiple "screens" (sections):
 - **Dark mode** via `[data-theme="dark"]` attribute
 - **Mobile-first** responsive design
 - **Safe area insets** for iOS notch
-
-```css
-:root {
-  --bg-primary: #f8f9fa;
-  --accent: #4361ee;
-  /* ... */
-}
-
-[data-theme="dark"] {
-  --bg-primary: #0f0f1a;
-  /* ... */
-}
-```
 
 ## Data Flow
 
@@ -294,11 +249,13 @@ getDueCards() → sortCardsForReview() → showCard() → handleReview()
   IndexedDB                              calculateNextReview() → updateCard()
 ```
 
-### Practice Flow
+### Page-Primed Study Flow
 ```
-getAllCards() → sort by dueDate (randomize ties) → showCard() → handleReview()
-                                                                      ↓
-                                                        calculateNextReview() → updateCard()
+NotebookModule.open() → browse page (spatial encoding) → "Study this page"
+     ↓                                                        ↓
+  getAllCards()                              startPageStudy(pageCards, positionMap)
+  sorted by createdAt desc                       ↓
+                                          StudyModule study flow with position hints
 ```
 
 ## Extending the App
@@ -310,26 +267,19 @@ getAllCards() → sort by dueDate (randomize ties) → showCard() → handleRevi
    <section id="new-screen" class="screen">...</section>
    ```
 
-2. Register in `app.js`:
-   ```javascript
-   const screens = { ..., new: document.getElementById('new-screen') }
-   ```
+2. `UI.showScreen('new')` works automatically (ID-based lookup).
 
-3. Navigate with:
-   ```javascript
-   showScreen('new')
-   ```
+### Adding a New Module
+
+1. Create `js/newmodule.js` with IIFE pattern exposing `window.NewModule = { init }`.
+2. Add `<script>` tag in `index.html` (before `app.js`).
+3. Call `NewModule.init()` from `app.js` init function.
+4. Add to service worker cache list in `sw.js`.
 
 ### Adding a Database Field
 
-1. Update schema in `db.js` (increment version):
-   ```javascript
-   db.version(2).stores({ cards: 'id, dueDate, newField' })
-   ```
-
-2. Update `createCard()` with default value
-
-3. Handle migration if needed
+1. Add new version in `db.js` with upgrade handler.
+2. Update `createCard()` with default value.
 
 ## Dependencies
 
@@ -345,8 +295,4 @@ Loaded via CDN, cached by service worker.
 - Safari 14+
 - Firefox 75+
 
-Requires:
-- IndexedDB
-- Service Workers
-- CSS Variables
-- ES6+
+Requires: IndexedDB, Service Workers, CSS Variables, ES6+

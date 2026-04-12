@@ -2,4 +2,4 @@
  * App version - single source of truth
  * Update this when releasing new versions
  */
-const APP_VERSION = '3.1';
+const APP_VERSION = '4.0';
