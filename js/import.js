@@ -137,7 +137,7 @@ window.ImportModule = (function () {
             }
 
             if (newCards.length > 0) {
-                await CardDB.addCards(newCards);
+                await CardDB.addCardsWithPlacement(newCards);
                 let msg = `Imported ${newCards.length} card${newCards.length !== 1 ? 's' : ''}`;
                 if (duplicates.length > 0) msg += `, ${duplicates.length} skipped`;
                 UI.showToast(msg);

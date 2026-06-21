@@ -71,45 +71,75 @@ The app uses a **module pattern** with `window.*` globals. Each module is an IIF
 
 ## Data Model
 
-### Card Schema (v2)
+### Card Schema (v3)
 
 ```javascript
 {
-  id: string,           // UUID v4
-  front: string,        // Question/prompt
-  back: string,         // Answer
-  anchor: string,       // Memory mnemonic / visual image note (optional)
-  interval: number,     // Days until next review
-  easeFactor: number,   // SM-2 difficulty (default: 2.5)
-  repetitions: number,  // Consecutive correct answers
-  dueDate: string,      // ISO date for next review
-  lastReviewed: string, // ISO date of last review
-  createdAt: string     // ISO date of creation
+  id: string,            // UUID v4
+  front: string,         // Question/prompt
+  back: string,          // Answer
+  anchor: string,        // Memory mnemonic / visual image note (optional)
+  interval: number,      // Days until next review
+  easeFactor: number,    // SM-2 difficulty (default: 2.5)
+  repetitions: number,   // Consecutive correct answers
+  dueDate: string,       // ISO date for next review
+  lastReviewed: string,  // ISO date of last review
+  createdAt: string,     // ISO date of creation
+  notebookPage: number,  // Permanent page id (0-based, monotonic)
+  notebookSlot: number   // Permanent slot index within page (0-11)
 }
 ```
+
+`notebookPage` and `notebookSlot` are assigned **once** at card creation and never change for the life of the card. They guarantee locational stability in the notebook view regardless of imports, deletions, or edits.
 
 ### Storage
 
 - **IndexedDB** via [Dexie.js](https://dexie.org/)
 - Database: `KapanakDB`
-- Table: `cards` (indexed by `id`, `dueDate`, `createdAt`)
-- Schema v2 adds `anchor` field with auto-migration
+- Table: `cards` (indexed by `id`, `dueDate`, `createdAt`, `notebookPage`)
+- Schema versions:
+  - **v1** — initial
+  - **v2** — adds `anchor` field, defaults to `''`
+  - **v3** — adds `notebookPage` / `notebookSlot`; upgrade backfills every existing card in `createdAt` order using the placement algorithm so the post-migration layout matches what users were seeing pre-migration
 
 ## Key Features Architecture
 
 ### Notebook View (Spatial Memory)
 
-Designed around **visuospatial memory** — cards are assigned permanent positions based on creation order.
+Designed around **visuospatial memory** — every card holds a permanent `(notebookPage, notebookSlot)` coordinate assigned at creation. Once a card is placed, it never moves again, regardless of how many later imports or deletions occur. Backups round-trip the coordinates, so restoring on a new device reproduces the exact same grid.
 
-- Fixed 3×4 grid (12 cards per page), newest page first
-- Cards never change position — spatial anchor is stable
+- Fixed 3×4 grid (12 slots per page), newest page displayed first (pages sorted by `notebookPage` descending)
+- Empty slots render as dashed placeholders so the geometry of each page is preserved
+- Slot badge (1-12) is fixed per slot, aiding muscle/spatial recall
 - Auto-sized text: font scales inversely with word length, centered in cell
 - Multi-value text (e.g. `friend / familiar`) splits on separators and renders line-by-line
-- **Filters**: All / Due — due cards get a glowing border, non-matching cells dim
+- **Filters**: All / Due / Unlearned — matching cards get a glowing border, non-matching cells dim
 - **Controls**: "With Translation" toggle + "Flip All" toggle (independent of each other)
 - Individual cell tap flips that cell (XOR with global flip state)
-- **Page dots** with due-card indicators; current page highlighted in white
+- **Page dots** with due / unlearned indicators; current page highlighted
 - **Page-primed study**: browse a page first (spatial pre-load), then quiz those cards
+
+#### Placement algorithm
+
+When new cards arrive (via import or future programmatic insert), each card receives the next available slot per this rule:
+
+1. Find the frontmost page (highest `notebookPage`) that still has at least one empty slot.
+2. If no such page exists, create a new page with `notebookPage = max + 1`.
+3. Assign the highest-numbered empty slot on that page (slot 11 first, then 10, 9, … down to 0).
+
+Worked example (starting from 24 cards filling pages 0 and 1, all 12 slots each):
+
+- Import 15 cards → 12 of them fill a new page id 2 (slots 11→0). The remaining 3 start page id 3 in slots 11, 10, 9. Display page 0 = page id 3 (slots 0-8 empty, slots 9-11 hold the latest 3).
+- Import 10 more → 9 of them fill the 9 empty slots on page id 3 (slots 8 down to 0). The 10th starts page id 4 at slot 11. Display page 0 = page id 4 (single card bottom-right, rest empty).
+
+Implementation lives in `db.js`:
+- `_nextSlot(state)` is the single source of truth for the rule. `state` carries `maxPage` and `frontPageFilledCount` between calls.
+- `addCardsWithPlacement(cards)` runs in a Dexie transaction: reads the current frontmost page state, walks each new card through `_nextSlot`, then `bulkAdd`s. The transaction prevents two concurrent imports from racing on the front page.
+- The v3 schema upgrade calls `_nextSlot` for every existing card in `createdAt` order, so the backfilled layout matches the previous "packed, newest-first" rendering.
+
+#### Holes are permanent
+
+Deleting a card leaves its slot empty forever — new imports only fill the frontmost partial page, never older holes. This is intentional: spatial memory degrades if cells shuffle, so the cost of a few empty cells is preferred over moving any existing card.
 
 ### Card Flip Animation
 - Pure CSS 3D transform (`rotateY(180deg)`)
@@ -145,18 +175,23 @@ Designed around **visuospatial memory** — cards are assigned permanent positio
 
 ```javascript
 window.CardDB = {
-  createCard(front, back)    // Create new card with SM-2 defaults + empty anchor
-  addCards(cards)            // Bulk insert
-  getAllCards()              // Get all cards
-  getDueCards()              // Get cards where dueDate <= now
-  getDueCount()              // Count due cards
-  getTotalCount()            // Count all cards
-  getCard(id)                // Get single card
-  updateCard(id, updates)    // Update card fields
-  deleteCard(id)             // Delete single card
-  deleteAllCards()           // Clear all data
-  exportData()               // Export as JSON string
-  importData(json)           // Import from JSON string
+  createCard(front, back)         // Create new card with SM-2 defaults + empty anchor
+                                  // (notebook coords assigned at insert time, not here)
+  addCards(cards)                 // Bulk insert (no placement — used internally)
+  addCardsWithPlacement(cards)    // Bulk insert with (notebookPage, notebookSlot) assigned
+                                  // in a transaction; this is what import.js calls
+  getAllCards()                   // Get all cards
+  getDueCards()                   // Get cards where dueDate <= now
+  getDueCount()                   // Count due cards
+  getTotalCount()                 // Count all cards
+  getCard(id)                     // Get single card
+  updateCard(id, updates)         // Update card fields
+  deleteCard(id)                  // Delete single card
+  deleteAllCards()                // Clear all data
+  exportData()                    // Export as JSON string (includes notebook coords)
+  importData(json)                // Import from JSON; backfills notebook coords if
+                                  // the backup predates schema v3
+  NOTEBOOK_PAGE_CAPACITY          // Constant: 12 slots per notebook page
 }
 ```
 
@@ -191,6 +226,7 @@ window.ImportModule = { init() }  // Import screen UI with duplicate detection
 window.NotebookModule = {
   init()                   // Wire up DOM and events
   open()                   // Load cards, reset state, show screen
+  resume()                 // Reload cards keeping current page (used after page study)
 }
 ```
 
@@ -239,7 +275,9 @@ Navigation: `UI.showScreen('name')` — uses `getElementById(name + '-screen')`.
 
 ### Import Flow
 ```
-User Input → parseImportText() → createCard() → addCards() → IndexedDB
+User Input → parseImportText() → createCard() → addCardsWithPlacement() → IndexedDB
+                                                       ↓
+                                       _nextSlot() assigns (page, slot)
 ```
 
 ### Study Flow
@@ -254,8 +292,18 @@ getDueCards() → sortCardsForReview() → showCard() → handleReview()
 NotebookModule.open() → browse page (spatial encoding) → "Study this page"
      ↓                                                        ↓
   getAllCards()                              startPageStudy(pageCards, positionMap)
-  sorted by createdAt desc                       ↓
-                                          StudyModule study flow with position hints
+  grouped by notebookPage                        ↓
+  (descending = newest first)             StudyModule study flow with position hints
+                                                 ↓
+                                          NotebookModule.resume() on "back"
+```
+
+### Backup / Restore Flow
+```
+exportData() → JSON {version: 2, cards: [...]}  // includes notebookPage/notebookSlot
+importData(json) → deleteAllCards() → bulkAdd(cards)
+                        ↓
+        (v3 backfill via _nextSlot if backup predates v3)
 ```
 
 ## Extending the App
@@ -279,7 +327,8 @@ NotebookModule.open() → browse page (spatial encoding) → "Study this page"
 ### Adding a Database Field
 
 1. Add new version in `db.js` with upgrade handler.
-2. Update `createCard()` with default value.
+2. Update `createCard()` with default value (or assign at insert time, like `notebookPage`/`notebookSlot`).
+3. If the field should round-trip through backups, ensure `importData()` handles older backups that lack the field.
 
 ## Dependencies
 

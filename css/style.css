@@ -1286,6 +1286,20 @@ body {
     color: var(--text-secondary);
 }
 
+/* Empty slot — reserved cell, no content, no interaction */
+.nb-cell.nb-cell-empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: var(--border);
+    opacity: 0.35;
+    cursor: default;
+    box-shadow: none;
+}
+
+.nb-cell.nb-cell-empty:active {
+    transform: none;
+}
+
 /* Position badge */
 .nb-badge {
     position: absolute;

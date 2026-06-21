@@ -12,6 +12,7 @@ window.NotebookModule = (function () {
     const PAGE_SIZE = 12;
 
     let allCards      = [];
+    let pageGroups    = [];   // [{ page, cards: Array(12) of card|null }] newest first
     let dueIds        = new Set();
     let unlearnedIds  = new Set();
 
@@ -69,26 +70,41 @@ window.NotebookModule = (function () {
 
     // ── data helpers ──────────────────────────────────────────────────────────
 
-    function _sortCards(cards) {
-        // Newest first
-        return [...cards].sort((a, b) => {
-            const d = new Date(b.createdAt) - new Date(a.createdAt);
-            return d !== 0 ? d : b.id.localeCompare(a.id);
-        });
+    // Group cards into pages keyed by notebookPage. Each page is a length-12
+    // array indexed by notebookSlot, with nulls for empty slots. Pages are
+    // returned newest-first so display index 0 is the most recent page.
+    function _buildPageGroups(cards) {
+        const byPage = new Map();
+        for (const c of cards) {
+            if (c.notebookPage === undefined || c.notebookSlot === undefined) continue;
+            if (!byPage.has(c.notebookPage)) {
+                byPage.set(c.notebookPage, new Array(PAGE_SIZE).fill(null));
+            }
+            byPage.get(c.notebookPage)[c.notebookSlot] = c;
+        }
+        return [...byPage.entries()]
+            .sort((a, b) => b[0] - a[0])
+            .map(([page, slots]) => ({ page, cards: slots }));
     }
 
-    function _pageCards() {
-        return allCards.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+    function _pageSlots() {
+        return pageGroups[currentPage] ? pageGroups[currentPage].cards : [];
+    }
+
+    function _pageCardsOnly() {
+        return _pageSlots().filter(Boolean);
     }
 
     function _totalPages() {
-        return Math.max(1, Math.ceil(allCards.length / PAGE_SIZE));
+        return Math.max(1, pageGroups.length);
     }
 
     function _buildPositionMap() {
         const map = {};
-        allCards.forEach((c, i) => {
-            map[c.id] = { page: Math.floor(i / PAGE_SIZE), pos: i % PAGE_SIZE };
+        pageGroups.forEach((group, displayIdx) => {
+            group.cards.forEach((card, slot) => {
+                if (card) map[card.id] = { page: displayIdx, pos: slot };
+            });
         });
         return map;
     }
@@ -103,13 +119,14 @@ window.NotebookModule = (function () {
     // ── render ────────────────────────────────────────────────────────────────
 
     function _render() {
-        const cards = _pageCards();
+        const slots = _pageSlots();
+        const cardsOnPage = _pageCardsOnly();
         const total = _totalPages();
 
         pageIndicator.textContent = `Page ${currentPage + 1} of ${total}`;
         prevBtn.disabled     = currentPage === 0;
         nextBtn.disabled     = currentPage >= total - 1;
-        studyPageBtn.disabled = cards.length === 0;
+        studyPageBtn.disabled = cardsOnPage.length === 0;
 
         filterBtns.forEach(btn =>
             btn.classList.toggle('active', btn.dataset.filter === filterMode)
@@ -121,13 +138,21 @@ window.NotebookModule = (function () {
 
         grid.innerHTML = '';
 
-        if (cards.length === 0) {
-            grid.innerHTML = '<div class="notebook-empty">No cards on this page.</div>';
+        if (slots.length === 0) {
+            grid.innerHTML = '<div class="notebook-empty">No cards yet.</div>';
             return;
         }
 
-        cards.forEach((card, idx) => {
-            const globalIdx   = currentPage * PAGE_SIZE + idx;
+        slots.forEach((card, slotIdx) => {
+            const cell = document.createElement('div');
+            cell.className = 'nb-cell';
+
+            if (!card) {
+                cell.classList.add('nb-cell-empty');
+                grid.appendChild(cell);
+                return;
+            }
+
             const highlighted = _isHighlighted(card);
 
             // XOR: individual override inverts the global state for this cell
@@ -137,30 +162,25 @@ window.NotebookModule = (function () {
             const primaryText   = isFlipped ? card.back  : card.front;
             const secondaryText = isFlipped ? card.front : card.back;
 
-            const cell = document.createElement('div');
-            cell.className = 'nb-cell';
             if (!highlighted)          cell.classList.add('nb-cell-dim');
             if (dueIds.has(card.id))   cell.classList.add('nb-cell-due');
             else if (unlearnedIds.has(card.id)) cell.classList.add('nb-cell-new');
 
-            // Position badge
+            // Slot badge (1-12) — stable across pages, aids locational memory
             const badge = document.createElement('span');
             badge.className = 'nb-badge';
-            badge.textContent = globalIdx + 1;
+            badge.textContent = slotIdx + 1;
 
-            // Primary text
             const primary = _buildTextEl(primaryText, 'nb-primary', highlighted);
 
             cell.appendChild(badge);
             cell.appendChild(primary);
 
-            // Translation overlay (when showTranslation is on)
             if (showTranslation && secondaryText) {
                 const secondary = _buildTextEl(secondaryText, 'nb-secondary', highlighted);
                 cell.appendChild(secondary);
             }
 
-            // Anchor hint
             if (card.anchor && highlighted) {
                 const anchor = document.createElement('div');
                 anchor.className = 'nb-anchor';
@@ -206,8 +226,7 @@ window.NotebookModule = (function () {
             dot.className = 'nb-dot';
             if (i === currentPage) dot.classList.add('nb-dot-current');
 
-            const start = i * PAGE_SIZE;
-            const pCards = allCards.slice(start, start + PAGE_SIZE);
+            const pCards = pageGroups[i] ? pageGroups[i].cards.filter(Boolean) : [];
             if (pCards.some(c => dueIds.has(c.id)))       dot.classList.add('nb-dot-due');
             else if (pCards.some(c => unlearnedIds.has(c.id))) dot.classList.add('nb-dot-new');
 
@@ -247,7 +266,7 @@ window.NotebookModule = (function () {
     }
 
     async function _studyPage() {
-        const cards = _pageCards();
+        const cards = _pageCardsOnly();
         if (!cards.length) return;
 
         let queue = cards;
@@ -266,7 +285,8 @@ window.NotebookModule = (function () {
 
     async function open() {
         const [all, due] = await Promise.all([CardDB.getAllCards(), CardDB.getDueCards()]);
-        allCards     = _sortCards(all);
+        allCards     = all;
+        pageGroups   = _buildPageGroups(allCards);
         dueIds       = new Set(due.map(c => c.id));
         unlearnedIds = new Set(all.filter(c => c.repetitions === 0 && !c.lastReviewed).map(c => c.id));
         currentPage  = 0;
@@ -281,7 +301,8 @@ window.NotebookModule = (function () {
     // Re-open notebook keeping the current page (used after page-primed study)
     async function resume() {
         const [all, due] = await Promise.all([CardDB.getAllCards(), CardDB.getDueCards()]);
-        allCards     = _sortCards(all);
+        allCards     = all;
+        pageGroups   = _buildPageGroups(allCards);
         dueIds       = new Set(due.map(c => c.id));
         unlearnedIds = new Set(all.filter(c => c.repetitions === 0 && !c.lastReviewed).map(c => c.id));
         // Clamp page in case cards were deleted
